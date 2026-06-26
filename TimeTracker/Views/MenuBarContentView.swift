@@ -38,6 +38,10 @@ struct MenuBarContentView: View {
         }
         .padding(12)
         .frame(width: 320)
+        // Activate the app as soon as the popover appears, so SettingsLink (and
+        // openWindow) work on the first click. An LSUIElement app isn't active on
+        // its own, and SettingsLink silently no-ops until the app is active.
+        .onAppear { NSApp.activate(ignoringOtherApps: true) }
     }
 
     // MARK: - Idle
@@ -106,7 +110,10 @@ struct MenuBarContentView: View {
     private var footer: some View {
         HStack {
             Button("History") { openHistory() }
-            Button("Settings") { openSettings() }
+            // SettingsLink is the sanctioned way to open the Settings scene.
+            // It works on the first click because the popover's .onAppear has
+            // already activated the app (see body).
+            SettingsLink { Text("Settings") }
             Spacer()
             Button("Quit") { NSApplication.shared.terminate(nil) }
         }
@@ -117,23 +124,11 @@ struct MenuBarContentView: View {
     // MARK: - Window opening
     //
     // This is an LSUIElement (accessory) app, so it never becomes frontmost on
-    // its own. We must activate the app first, or windows open behind others.
-    //
-    // SettingsLink additionally refuses to open the Settings scene at all until
-    // the app has been activated by some *other* window — which is why Settings
-    // previously only worked after opening History. Activating synchronously and
-    // opening Settings via the AppKit action fixes it from a cold start.
+    // its own — activate before opening, or the window appears behind others.
 
     private func openHistory() {
         NSApp.activate(ignoringOtherApps: true)
         openWindow(id: "history")
-    }
-
-    private func openSettings() {
-        NSApp.activate(ignoringOtherApps: true)
-        // macOS 14+ selector. Reliable from an accessory app where SettingsLink
-        // is not; opens the SwiftUI `Settings { … }` scene.
-        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
     }
 
     // MARK: - Actions
