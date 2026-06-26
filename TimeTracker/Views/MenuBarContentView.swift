@@ -106,10 +106,7 @@ struct MenuBarContentView: View {
     private var footer: some View {
         HStack {
             Button("History") { openHistory() }
-            // SettingsLink opens the Settings scene; the simultaneous gesture
-            // brings the app forward so the window isn't buried behind others.
-            SettingsLink { Text("Settings") }
-                .simultaneousGesture(TapGesture().onEnded { activateApp() })
+            Button("Settings") { openSettings() }
             Spacer()
             Button("Quit") { NSApplication.shared.terminate(nil) }
         }
@@ -117,22 +114,26 @@ struct MenuBarContentView: View {
         .font(.caption)
     }
 
-    // MARK: - Window activation
+    // MARK: - Window opening
     //
     // This is an LSUIElement (accessory) app, so it never becomes frontmost on
-    // its own. Opening a window without activating leaves it behind other apps,
-    // which looks like "nothing happened." Activate on the next runloop tick so
-    // the window exists before we pull the app forward.
+    // its own. We must activate the app first, or windows open behind others.
+    //
+    // SettingsLink additionally refuses to open the Settings scene at all until
+    // the app has been activated by some *other* window — which is why Settings
+    // previously only worked after opening History. Activating synchronously and
+    // opening Settings via the AppKit action fixes it from a cold start.
 
     private func openHistory() {
+        NSApp.activate(ignoringOtherApps: true)
         openWindow(id: "history")
-        activateApp()
     }
 
-    private func activateApp() {
-        DispatchQueue.main.async {
-            NSApp.activate(ignoringOtherApps: true)
-        }
+    private func openSettings() {
+        NSApp.activate(ignoringOtherApps: true)
+        // macOS 14+ selector. Reliable from an accessory app where SettingsLink
+        // is not; opens the SwiftUI `Settings { … }` scene.
+        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
     }
 
     // MARK: - Actions
