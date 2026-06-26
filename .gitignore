@@ -15,3 +15,6 @@ build/
 # Misc
 *.swp
 *~
+
+# Packaging output
+dist/

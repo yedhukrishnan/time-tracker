@@ -85,6 +85,25 @@ strings in `TimeTracker.cloud.entitlements`, and the CloudKit container in Xcode
   for a personal tool.
 - Add an app icon under `TimeTracker/Resources/Assets.xcassets` before shipping.
 
+## Package a release (.dmg)
+
+On macOS with Xcode installed, from the repo root:
+
+```bash
+./scripts/build-dmg.sh           # → dist/SimpleTimeTracker.dmg
+```
+
+This builds the Release configuration and packages the app into a drag-to-install
+disk image. The default build runs on **your** Mac but Gatekeeper will block it on
+others. To distribute, sign and notarize with a paid Apple Developer account:
+
+```bash
+DEVELOPER_ID="Developer ID Application: Yedhu Krishnan (TEAMID)" ./scripts/build-dmg.sh
+xcrun notarytool submit dist/SimpleTimeTracker.dmg \
+  --apple-id <id> --team-id <TEAMID> --password <app-specific-pw> --wait
+xcrun stapler staple dist/SimpleTimeTracker.dmg
+```
+
 ## Project layout
 
 ```
