@@ -9,6 +9,7 @@ struct HistoryView: View {
     @Query(sort: \TimeEntry.startedAt, order: .reverse) private var entries: [TimeEntry]
 
     @State private var editing: TimeEntry?
+    @State private var pendingDelete: TimeEntry?   // set when a delete is awaiting confirmation
     @State private var minRating: Int = 0          // 0 = any
     @State private var searchText: String = ""
 
@@ -46,8 +47,16 @@ struct HistoryView: View {
                             ForEach(group.items) { entry in
                                 row(entry).contentShape(Rectangle())
                                     .onTapGesture { editing = entry }
+                                    .contextMenu {
+                                        Button("Edit…") { editing = entry }
+                                        Button("Delete…", role: .destructive) { pendingDelete = entry }
+                                    }
                             }
-                            .onDelete { offsets in delete(offsets, in: group.items) }
+                            // Swipe-to-delete routes through confirmation rather than
+                            // deleting immediately.
+                            .onDelete { offsets in
+                                if let i = offsets.first { pendingDelete = group.items[i] }
+                            }
                         } header: {
                             HStack {
                                 Text(group.day, format: .dateTime.weekday(.wide).month().day())
@@ -61,6 +70,15 @@ struct HistoryView: View {
         }
         .sheet(item: $editing) { entry in
             WrapUpForm(entry: entry, isEditing: true) { editing = nil }
+        }
+        .alert("Delete session?",
+               isPresented: Binding(get: { pendingDelete != nil },
+                                    set: { if !$0 { pendingDelete = nil } }),
+               presenting: pendingDelete) { entry in
+            Button("Delete", role: .destructive) { performDelete(entry) }
+            Button("Cancel", role: .cancel) { }
+        } message: { entry in
+            Text("“\(entry.agenda.isEmpty ? "This session" : entry.agenda)” will be permanently deleted. This can't be undone.")
         }
     }
 
@@ -109,8 +127,9 @@ struct HistoryView: View {
         AppModel.format(items.reduce(0) { $0 + $1.duration })
     }
 
-    private func delete(_ offsets: IndexSet, in items: [TimeEntry]) {
-        for i in offsets { context.delete(items[i]) }
+    private func performDelete(_ entry: TimeEntry) {
+        context.delete(entry)
         try? context.save()
+        pendingDelete = nil
     }
 }
