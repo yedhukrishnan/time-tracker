@@ -25,13 +25,10 @@ iCloud sync. See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the design rationale.
 
 ## Build & run
 
-The repo holds source + an [XcodeGen](https://github.com/yonaskolb/XcodeGen) spec
-rather than a checked-in `.xcodeproj` (which is noisy and merge-hostile).
+Open the project and run it:
 
 ```bash
-brew install xcodegen      # once
 cd time-tracker
-xcodegen generate          # creates TimeTracker.xcodeproj from project.yml
 open TimeTracker.xcodeproj
 ```
 
@@ -47,17 +44,6 @@ otherwise fail with *"has entitlements that require signing with a developer
 certificate."* The cloud version is preserved in `TimeTracker.cloud.entitlements`
 for when you're ready (see below).
 
-### No XcodeGen? Create the project by hand
-
-1. Xcode → New → Project → macOS → App. Product name **TimeTracker**, interface
-   **SwiftUI**, language **Swift**, storage **None**.
-2. Delete the template's `ContentView.swift` and the generated `App` file.
-3. Drag the contents of the `TimeTracker/` folder into the project (check
-   "Copy items if needed" off if it's already in place; add to the TimeTracker target).
-4. In the target's **Info** tab, add `Application is agent (UIElement) = YES`.
-5. Point **Build Settings → Info.plist File** at `TimeTracker/Info.plist` and
-   **Code Signing Entitlements** at `TimeTracker/TimeTracker.entitlements`.
-
 ## Enable iCloud sync
 
 Sync is wired in code (`ModelConfiguration(..., cloudKitDatabase: .automatic)` —
@@ -65,11 +51,10 @@ which uses CloudKit when the entitlement is present and falls back to a local
 store otherwise), but needs a **paid** account, project capabilities, and a
 container:
 
-0. Point the build's **Code Signing Entitlements** at
-   `TimeTracker/TimeTracker.cloud.entitlements` (in `project.yml`, change
-   `CODE_SIGN_ENTITLEMENTS`), and uncomment the `UIBackgroundModes` block in
-   `Info.plist`.
-1. Set your **Team** (Signing & Capabilities, or `DEVELOPMENT_TEAM` in `project.yml`).
+0. Point **Build Settings → Code Signing Entitlements** at
+   `TimeTracker/TimeTracker.cloud.entitlements`, and uncomment the
+   `UIBackgroundModes` block in `Info.plist`.
+1. Set your **Team** in **Signing & Capabilities**.
 2. Add the **iCloud** capability → check **CloudKit** → add a container, e.g.
    `iCloud.com.yedhu.TimeTracker`.
 3. Add the **Background Modes** capability → check **Remote notifications**.
@@ -82,8 +67,8 @@ missing capability — check the CloudKit Dashboard.
 ## Change the bundle identifier
 
 The placeholder is `com.yedhu.TimeTracker`. To change it, update all three:
-`project.yml` (`PRODUCT_BUNDLE_IDENTIFIER`), the `iCloud.<id>` strings in
-`TimeTracker.entitlements`, and the CloudKit container in Xcode.
+the target's **Bundle Identifier** (Signing & Capabilities), the `iCloud.<id>`
+strings in `TimeTracker.cloud.entitlements`, and the CloudKit container in Xcode.
 
 ## Known limitations / next steps
 

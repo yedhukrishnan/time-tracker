@@ -62,6 +62,7 @@ Interaction model:
 | Notifications | `UserNotifications` (`UNUserNotificationCenter`) | §5b, §7. |
 | Launch at login | `SMAppService.mainApp` | So the agent is actually running when work starts. |
 | Min OS | macOS 14 (Sonoma) | Driven by SwiftData. See §10. |
+| Project | `TimeTracker.xcodeproj` | Edited directly in Xcode (solo workflow). |
 
 ---
 
