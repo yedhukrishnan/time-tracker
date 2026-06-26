@@ -2,9 +2,9 @@ import SwiftUI
 
 /// Capture or edit a session's fields. Two modes:
 ///   - quick wrap-up (default): just the reflective fields — achievement + rating —
-///     shown inline in the popover right after stopping.
-///   - full edit (`isEditing: true`): also lets you change the agenda and the
-///     start/end times, used as a sheet in History.
+///     shown inline in the popover right after stopping (compact).
+///   - full edit (`isEditing: true`): a grouped form that also edits the agenda and
+///     the start/end times, used as a sheet in History.
 ///
 /// Edits are buffered in local state and only written back on Save, so Cancel/Skip
 /// leaves the entry untouched.
@@ -32,24 +32,71 @@ struct WrapUpForm: View {
     }
 
     var body: some View {
+        if isEditing { editLayout } else { quickLayout }
+    }
+
+    // MARK: - Full edit (History sheet)
+
+    private var editLayout: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text("Edit session").font(.headline)
+                Spacer()
+                Text(AppModel.format(previewDuration))
+                    .foregroundStyle(.secondary).monospacedDigit()
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 14)
+
+            Divider()
+
+            Form {
+                Section("Agenda") {
+                    TextField("What were you working on?", text: $agenda, axis: .vertical)
+                        .lineLimit(1...3)
+                }
+                Section("Time") {
+                    DatePicker("Start", selection: $startedAt,
+                               displayedComponents: [.date, .hourAndMinute])
+                    DatePicker("End", selection: $endedAt, in: startedAt...,
+                               displayedComponents: [.date, .hourAndMinute])
+                }
+                Section("Reflection") {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("What did you get done?")
+                            .font(.caption).foregroundStyle(.secondary)
+                        TextEditor(text: $achievement)
+                            .frame(minHeight: 72)
+                            .overlay(RoundedRectangle(cornerRadius: 6).stroke(.quaternary))
+                    }
+                    LabeledContent("Rating") { StarRating(rating: $rating) }
+                }
+            }
+            .formStyle(.grouped)
+
+            Divider()
+
+            HStack {
+                Spacer()
+                Button("Cancel", role: .cancel, action: onDone)
+                Button("Save") { save() }
+                    .keyboardShortcut(.defaultAction)
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+        }
+        .frame(width: 420, height: 540)
+    }
+
+    // MARK: - Quick wrap-up (popover)
+
+    private var quickLayout: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text(headerTitle).font(.headline).lineLimit(1)
                 Spacer()
                 Text(AppModel.format(previewDuration))
                     .foregroundStyle(.secondary).monospacedDigit()
-            }
-
-            if isEditing {
-                Text("Agenda").font(.subheadline)
-                TextField("What were you working on?", text: $agenda, axis: .vertical)
-                    .textFieldStyle(.roundedBorder)
-                    .lineLimit(1...3)
-
-                DatePicker("Start", selection: $startedAt,
-                           displayedComponents: [.date, .hourAndMinute])
-                DatePicker("End", selection: $endedAt, in: startedAt...,
-                           displayedComponents: [.date, .hourAndMinute])
             }
 
             Text("What did you get done?").font(.subheadline)
@@ -65,18 +112,19 @@ struct WrapUpForm: View {
 
             HStack {
                 Spacer()
-                Button(isEditing ? "Cancel" : "Skip", role: .cancel, action: onDone)
+                Button("Skip", role: .cancel, action: onDone)
                 Button("Save") { save() }
                     .keyboardShortcut(.defaultAction)
             }
         }
         .padding()
-        .frame(width: isEditing ? 360 : 320)
+        .frame(width: 320)
     }
 
+    // MARK: - Helpers
+
     private var headerTitle: String {
-        if isEditing { return "Edit session" }
-        return entry.agenda.isEmpty ? "Session" : entry.agenda
+        entry.agenda.isEmpty ? "Session" : entry.agenda
     }
 
     /// Live duration preview while editing times; the saved value otherwise.
