@@ -19,6 +19,10 @@ final class TrackingController {
     /// UI observes pause/resume reliably.
     private(set) var isPaused: Bool = false
 
+    /// Called after any state transition (start/stop/pause/resume) so the nudge
+    /// scheduler can re-evaluate. Set by AppModel.
+    var onChange: () -> Void = {}
+
     private var ticker: Timer?
     private let context: ModelContext
 
@@ -40,6 +44,7 @@ final class TrackingController {
         elapsed = 0
         save()
         startTicker()
+        onChange()
     }
 
     /// Pause the running session — active time stops accumulating.
@@ -49,6 +54,7 @@ final class TrackingController {
         entry.touch()
         isPaused = true
         save()
+        onChange()
     }
 
     /// Resume a paused session — fold the just-ended pause into the total.
@@ -60,6 +66,7 @@ final class TrackingController {
         isPaused = false
         elapsed = entry.duration
         save()
+        onChange()
     }
 
     /// End the running session and return it for wrap-up (achievement + rating).
@@ -77,6 +84,7 @@ final class TrackingController {
         isPaused = false
         stopTicker()
         save()
+        onChange()
         return entry
     }
 

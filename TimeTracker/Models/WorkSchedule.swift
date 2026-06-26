@@ -15,11 +15,16 @@ final class WorkSchedule {
     var endMinutes: Int = 18 * 60  // 18:00
     var isEnabled: Bool = true
 
+    /// Creation time — stable key to keep one row per weekday when sync produces
+    /// duplicates (keep earliest).
+    var createdAt: Date = Date.now
+
     init(weekday: Int, startMinutes: Int = 9 * 60, endMinutes: Int = 18 * 60, isEnabled: Bool = true) {
         self.weekday = weekday
         self.startMinutes = startMinutes
         self.endMinutes = endMinutes
         self.isEnabled = isEnabled
+        self.createdAt = .now
     }
 
     /// True if this row's window spans midnight (e.g. 22:00 → 02:00).

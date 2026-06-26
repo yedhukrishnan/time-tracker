@@ -210,32 +210,28 @@ The obvious idea — "schedule a repeating notification every 15 minutes" via `U
 
 ### The approach that works
 
-Because the app is a resident agent (§2), you don't need the OS to schedule far-future notifications blindly. You run an **in-process scheduler** that holds at most one pending "nudge" notification and recomputes it whenever state changes.
+**Pre-schedule** the upcoming nudges as real notification requests (`UNTimeIntervalNotificationTrigger`) instead of posting them from an in-process timer, and cancel/rebuild the set whenever state changes. The OS delivers a pre-scheduled notification even if the app is suspended by **App Nap** — a polling timer would stall (see §9).
 
-State that triggers a recompute:
-- a session **starts** → cancel any pending nudge (you're tracking now)
-- a session **stops** → schedule the next nudge
-- the **work-hours boundary** is crossed (start of day → begin nudging; end of day → stop)
-- settings change (interval or enabled toggle)
+> An earlier design fired each nudge from a 30 s heartbeat. That works while the app is awake, but a menu bar agent with no visible window is a prime App Nap target, so the heartbeat could be throttled and nudges missed. Pre-scheduling sidesteps that.
+
+State that triggers a rebuild:
+- a session **starts/stops/pauses** → tracking ⇒ silence; idle ⇒ re-arm
+- **settings or work-hours edits** (interval, message, enabled, schedule)
+- **wake** from sleep, plus a periodic backstop (every 5 min) to extend coverage
 
 Core logic, in pseudocode:
 
 ```
 func reschedule():
-    cancelPendingNudge()
+    cancelPending()                                  // remove our pending nudges by id
     guard settings.nudgeEnabled else { return }
-    guard noSessionRunning else { return }          // tracking ⇒ silence
-    guard withinWorkHoursNow() else {
-        scheduleWakeupAt(nextWorkHoursStart())       // re-evaluate at 9:00
-        return
-    }
-    let fireAt = nextQuarterBoundary(from: now)      // or now + interval
-    if fireAt <= todaysWorkHoursEnd:
-        scheduleNudge(at: fireAt, body: settings.nudgeMessage)
-    // when it fires, the notification handler calls reschedule() again → chain
+    guard noSessionRunning else { return }           // tracking (incl. paused) ⇒ silence
+    // Walk a fixed clock grid: startOfDay + k·interval.
+    for t in grid where t > max(now, snoozedUntil) && withinWorkHours(t):
+        scheduleNudge(at: t, body: settings.nudgeMessage)   // up to 32, < 24h out
 ```
 
-Each fired nudge re-arms the next one, so you get a self-perpetuating chain that automatically stops when you start tracking or leave work hours. A lightweight repeating `Timer` (every 30–60 s) acts as a backstop to catch work-hours boundaries and clock changes.
+Fire times are aligned to a fixed clock grid (`startOfDay + k·interval`), which is what makes rebuilding **idempotent**: a 9:15 nudge stays at 9:15 no matter how often we recompute, so the periodic backstop can't keep pushing the next nudge into the future. We schedule up to 32 upcoming nudges (well under the OS's 64-pending cap), giving hours of buffer so even a delayed backstop never leaves a gap.
 
 ### Delivery details
 
@@ -262,7 +258,7 @@ A suggested order that keeps you with a runnable app at every step:
 
 ## 9. Risks & constraints
 
-- **Background execution isn't guaranteed.** macOS can deprioritize a long-idle agent, and notifications won't fire while the Mac is asleep. The nudge engine must re-evaluate on wake (`NSWorkspace.didWakeNotification`) and not assume timers fired on schedule.
+- **Background execution isn't guaranteed.** macOS can App-Nap a long-idle agent, throttling its timers. This is *why* nudges are pre-scheduled with the OS (§7) rather than posted from a timer — delivery survives App Nap. The remaining limit is sleep: nothing fires while the Mac is fully asleep, so the engine also re-evaluates on wake (`NSWorkspace.didWakeNotification`).
 - **CloudKit needs a paid Apple Developer account** and a provisioned container. Local-only SwiftData works without it, so build phases 1–5 need no account; only phase 6 does.
 - **App Sandbox + entitlements** must be correct for CloudKit; misconfiguration fails silently (data just doesn't sync). Verify with the CloudKit Dashboard.
 - **No server-side uniqueness** ⇒ the "single running session" rule is an app-layer invariant that can momentarily break across synced devices (§5d).

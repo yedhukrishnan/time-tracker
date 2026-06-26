@@ -18,5 +18,9 @@ final class AppSettings {
     /// Whether the app registers itself as a login item (see `LoginItem`).
     var launchAtLogin: Bool = false
 
+    /// Creation time. Used as a stable, cross-device key to pick a single winner
+    /// when CloudKit sync has produced duplicate singleton rows (keep earliest).
+    var createdAt: Date = Date.now
+
     init() {}
 }

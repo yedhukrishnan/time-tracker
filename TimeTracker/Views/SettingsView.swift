@@ -119,6 +119,8 @@ struct SettingsView: View {
 
     private func save() {
         do { try context.save() } catch { print("Settings save error: \(error)") }
+        // Work-hours and nudge settings affect when nudges fire — rebuild.
+        model.nudge.reschedule()
     }
 
     /// Make sure a row exists for all 7 weekdays so the UI can bind directly.

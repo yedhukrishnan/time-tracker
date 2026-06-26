@@ -24,6 +24,7 @@ final class AppModel {
 
     /// Call once from the app entry point.
     func bootstrap() {
+        dedupeSchedules()
         seedDefaultScheduleIfNeeded()
 
         nudge.isTrackingProvider = { [weak self] in self?.tracking.isTracking ?? false }
@@ -33,6 +34,8 @@ final class AppModel {
             guard let self, !self.tracking.isTracking else { return }
             self.tracking.start(agenda: "")
         }
+        // Rebuild the nudge schedule whenever tracking state changes.
+        tracking.onChange = { [weak self] in self?.nudge.reschedule() }
         nudge.start()
 
         LoginItem.setEnabled(settings.launchAtLogin)
@@ -72,14 +75,40 @@ final class AppModel {
         (try? context.fetch(FetchDescriptor<WorkSchedule>())) ?? []
     }
 
+    /// Fetch the singleton settings, collapsing duplicates that two offline
+    /// devices may have created before CloudKit reconciled. Keep the earliest by
+    /// `createdAt` — a stable key both devices agree on, so they converge — and
+    /// delete the rest.
     private static func fetchOrCreateSettings(_ context: ModelContext) -> AppSettings {
-        if let existing = try? context.fetch(FetchDescriptor<AppSettings>()).first {
-            return existing
+        let all = (try? context.fetch(FetchDescriptor<AppSettings>(
+            sortBy: [SortDescriptor(\.createdAt, order: .forward)]
+        ))) ?? []
+        if let keep = all.first {
+            for extra in all.dropFirst() { context.delete(extra) }
+            if all.count > 1 { try? context.save() }
+            return keep
         }
         let fresh = AppSettings()
         context.insert(fresh)
         try? context.save()
         return fresh
+    }
+
+    /// Keep a single row per weekday, deleting sync-introduced duplicates. Keep
+    /// the earliest-created so both devices converge on the same survivor.
+    private func dedupeSchedules() {
+        let all = (try? context.fetch(FetchDescriptor<WorkSchedule>(
+            sortBy: [SortDescriptor(\.createdAt, order: .forward)]
+        ))) ?? []
+        var seen = Set<Int>()
+        var changed = false
+        for schedule in all {
+            if seen.insert(schedule.weekday).inserted == false {
+                context.delete(schedule)
+                changed = true
+            }
+        }
+        if changed { persist() }
     }
 
     /// Seed Mon–Fri 09:00–18:00 the first time the app runs.
