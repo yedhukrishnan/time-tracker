@@ -49,8 +49,9 @@ final class AppModel {
     static func format(_ interval: TimeInterval) -> String {
         let total = Int(interval)
         let h = total / 3600, m = (total % 3600) / 60, s = total % 60
+        // Two-digit minutes so width stays constant across the 9→10 rollover too.
         return h > 0 ? String(format: "%d:%02d:%02d", h, m, s)
-                     : String(format: "%d:%02d", m, s)
+                     : String(format: "%02d:%02d", m, s)
     }
 
     // MARK: - Settings persistence passthrough

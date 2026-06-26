@@ -29,11 +29,21 @@ struct TimeTrackerApp: App {
                 .environment(model)
                 .modelContainer(container)
         } label: {
-            // Live timer in the menu bar while tracking; icon-only when idle.
-            if model.tracking.isTracking {
-                Label(model.statusTitle, systemImage: "record.circle")
-            } else {
-                Image(systemName: "timer")
+            // Custom monochrome crosshair (template image), explicitly sized to
+            // match neighbouring menu bar icons. Show the live elapsed time as a
+            // separate Text while tracking — a MenuBarExtra label drops a Label's
+            // title, so the timer must be its own view.
+            HStack(spacing: 4) {
+                Image("MenuBarIcon")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 18, height: 18)
+                if model.tracking.isTracking {
+                    // Monospaced font for the numeric timer. (The menu bar item can
+                    // still reflow as overall width changes — known cosmetic issue.)
+                    Text(model.statusTitle)
+                        .font(.system(size: 13, weight: .regular, design: .monospaced))
+                }
             }
         }
         .menuBarExtraStyle(.window)
