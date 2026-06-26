@@ -86,7 +86,7 @@ struct SettingsView: View {
                     Image(nsImage: NSApplication.shared.applicationIconImage)
                         .resizable().scaledToFit().frame(width: 56, height: 56)
                     VStack(alignment: .leading, spacing: 3) {
-                        Text("Simple Time Tracker").font(.headline)
+                        Text("Time Tracker").font(.headline)
                         Text("Version \(appVersion)")
                             .font(.caption).foregroundStyle(.secondary)
                         Text("A native macOS menu bar time tracker.")

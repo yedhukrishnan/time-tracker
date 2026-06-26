@@ -1,12 +1,8 @@
-# Simple Time Tracker
+# Time Tracker
 
 A native macOS menu bar app for tracking work sessions, with per-session agenda,
 post-session reflection (achievement + 1–5 star rating), work-hours nudges, and
 iCloud sync. See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the design rationale.
-
-> The Xcode target, scheme, and bundle id remain `TimeTracker` /
-> `com.yedhu.TimeTracker` — only the user-facing display name is "Simple Time
-> Tracker". Renaming the target itself is optional and done in Xcode (see below).
 
 ## What it does
 
@@ -82,7 +78,7 @@ own.
 To build your own copy:
 
 1. **Bundle id + team** — in **Signing & Capabilities**, change the Bundle
-   Identifier to your own (e.g. `com.yourname.SimpleTimeTracker`) and set your
+   Identifier to your own (e.g. `com.yourname.TimeTracker`) and set your
    Team. This alone is enough for the default local build.
 2. **iCloud sync (optional)** — if you enable the cloud entitlements, also update
    the `iCloud.<id>` string in `TimeTracker.cloud.entitlements` to match your new
@@ -105,7 +101,7 @@ To build your own copy:
 On macOS with Xcode installed, from the repo root:
 
 ```bash
-./scripts/build-dmg.sh           # → dist/SimpleTimeTracker.dmg
+./scripts/build-dmg.sh           # → dist/TimeTracker.dmg
 ```
 
 This builds the Release configuration and packages the app into a drag-to-install
@@ -114,9 +110,9 @@ others. To distribute, sign and notarize with a paid Apple Developer account:
 
 ```bash
 DEVELOPER_ID="Developer ID Application: Yedhu Krishnan (TEAMID)" ./scripts/build-dmg.sh
-xcrun notarytool submit dist/SimpleTimeTracker.dmg \
+xcrun notarytool submit dist/TimeTracker.dmg \
   --apple-id <id> --team-id <TEAMID> --password <app-specific-pw> --wait
-xcrun stapler staple dist/SimpleTimeTracker.dmg
+xcrun stapler staple dist/TimeTracker.dmg
 ```
 
 ## Project layout

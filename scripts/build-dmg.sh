@@ -1,25 +1,25 @@
 #!/usr/bin/env bash
 #
-# Build Simple Time Tracker and package it into a distributable .dmg.
+# Build Time Tracker and package it into a distributable .dmg.
 #
 # Run on macOS with Xcode installed:
 #     ./scripts/build-dmg.sh
 #
-# Output: dist/SimpleTimeTracker.dmg
+# Output: dist/TimeTracker.dmg
 #
 # Optional environment variables:
 #   DEVELOPER_ID   "Developer ID Application: Your Name (TEAMID)" to code-sign
 #                  the app (needed before notarization / distribution to others).
 #   SCHEME         Xcode scheme to build              (default: TimeTracker)
 #   CONFIG         Build configuration                (default: Release)
-#   VOL_NAME       Volume + .app display name         (default: "Simple Time Tracker")
+#   VOL_NAME       Volume + .app display name         (default: "Time Tracker")
 #
 set -euo pipefail
 
 # --- config -----------------------------------------------------------------
 SCHEME="${SCHEME:-TimeTracker}"
 CONFIG="${CONFIG:-Release}"
-VOL_NAME="${VOL_NAME:-Simple Time Tracker}"
+VOL_NAME="${VOL_NAME:-Time Tracker}"
 PROJECT="TimeTracker.xcodeproj"
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -27,7 +27,7 @@ cd "$ROOT"
 
 BUILD_DIR="$ROOT/build"
 DIST_DIR="$ROOT/dist"
-DMG_PATH="$DIST_DIR/SimpleTimeTracker.dmg"
+DMG_PATH="$DIST_DIR/TimeTracker.dmg"
 
 # --- sanity checks ----------------------------------------------------------
 command -v xcodebuild >/dev/null || { echo "error: xcodebuild not found (install Xcode)."; exit 1; }
@@ -64,7 +64,7 @@ echo "==> Staging disk image contents…"
 STAGING="$(mktemp -d)"
 trap 'rm -rf "$STAGING"' EXIT
 
-# Name the bundle by its display name so Finder shows "Simple Time Tracker".
+# Name the bundle by its display name so Finder shows "Time Tracker".
 cp -R "$APP_PATH" "$STAGING/$VOL_NAME.app"
 # Drag-to-install target.
 ln -s /Applications "$STAGING/Applications"

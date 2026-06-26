@@ -12,7 +12,7 @@
 	<string>$(PRODUCT_NAME)</string>
 	<!-- User-facing app name (notifications, login items, About). -->
 	<key>CFBundleDisplayName</key>
-	<string>Simple Time Tracker</string>
+	<string>Time Tracker</string>
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
