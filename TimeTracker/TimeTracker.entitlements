@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- LOCAL-DEV entitlements: builds and runs with a free "personal team",
+	     no paid Apple Developer account needed. SwiftData uses a local store.
+	     To enable iCloud sync, switch the build to TimeTracker.cloud.entitlements
+	     (see README → "Enable iCloud sync"). -->
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+	<key>com.apple.security.network.client</key>
+	<true/>
+</dict>
+</plist>
