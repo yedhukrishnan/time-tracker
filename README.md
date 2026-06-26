@@ -68,11 +68,26 @@ container:
 If sync silently doesn't work, it's almost always a mismatched container id or a
 missing capability — check the CloudKit Dashboard.
 
-## Change the bundle identifier
+## Forking / building your own copy
 
-The placeholder is `com.yedhu.TimeTracker`. To change it, update all three:
-the target's **Bundle Identifier** (Signing & Capabilities), the `iCloud.<id>`
-strings in `TimeTracker.cloud.entitlements`, and the CloudKit container in Xcode.
+This repo ships with the original author's Apple identifiers — bundle id
+`com.yedhu.TimeTracker` and CloudKit container `iCloud.com.yedhu.TimeTracker`.
+You **cannot** build or sign with those: Apple registers a bundle id and a
+CloudKit container to a single developer account, so signing will reject them on
+your machine. They aren't secrets (the shipped app contains the bundle id in
+plain sight), and they expose no data — a CloudKit private database lives in each
+user's own iCloud account. They're simply identity you must replace with your
+own.
+
+To build your own copy:
+
+1. **Bundle id + team** — in **Signing & Capabilities**, change the Bundle
+   Identifier to your own (e.g. `com.yourname.SimpleTimeTracker`) and set your
+   Team. This alone is enough for the default local build.
+2. **iCloud sync (optional)** — if you enable the cloud entitlements, also update
+   the `iCloud.<id>` string in `TimeTracker.cloud.entitlements` to match your new
+   bundle id, and create that container in your account via the iCloud capability
+   / CloudKit Dashboard.
 
 ## Known limitations / next steps
 
