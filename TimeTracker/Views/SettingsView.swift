@@ -101,7 +101,6 @@ struct SettingsView: View {
                 }
             }
             Section {
-                LabeledContent("License", value: "MIT")
                 Text("© 2026 Yedhu Krishnan")
                     .font(.caption).foregroundStyle(.secondary)
             }
