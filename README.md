@@ -1,8 +1,12 @@
-# Time Tracker
+# Simple Time Tracker
 
 A native macOS menu bar app for tracking work sessions, with per-session agenda,
 post-session reflection (achievement + 1–5 star rating), work-hours nudges, and
 iCloud sync. See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the design rationale.
+
+> The Xcode target, scheme, and bundle id remain `TimeTracker` /
+> `com.yedhu.TimeTracker` — only the user-facing display name is "Simple Time
+> Tracker". Renaming the target itself is optional and done in Xcode (see below).
 
 ## What it does
 
@@ -93,3 +97,11 @@ TimeTracker/
 └── Views/                      # MenuBar popover, WrapUpForm, History, Settings,
                                 #   Components/StarRating
 ```
+
+## License
+
+Released under the [MIT License](LICENSE). © 2026 Yedhu Krishnan.
+
+## Author
+
+Yedhu Krishnan — dev@yedhu.me

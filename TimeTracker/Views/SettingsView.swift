@@ -1,7 +1,8 @@
 import SwiftUI
 import SwiftData
+import AppKit
 
-/// Settings: work hours, the nudge, and general options.
+/// Settings: work hours, the nudge, general options, and about.
 struct SettingsView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.modelContext) private var context
@@ -12,6 +13,7 @@ struct SettingsView: View {
             workHoursTab.tabItem { Label("Work Hours", systemImage: "calendar") }
             nudgeTab.tabItem { Label("Nudge", systemImage: "bell") }
             generalTab.tabItem { Label("General", systemImage: "gearshape") }
+            aboutTab.tabItem { Label("About", systemImage: "info.circle") }
         }
         .frame(width: 460, height: 360)
         .onAppear(perform: ensureAllWeekdaysExist)
@@ -73,6 +75,45 @@ struct SettingsView: View {
                 .font(.caption).foregroundStyle(.secondary)
         }
         .formStyle(.grouped)
+    }
+
+    // MARK: - About
+
+    private var aboutTab: some View {
+        Form {
+            Section {
+                HStack(spacing: 14) {
+                    Image(nsImage: NSApplication.shared.applicationIconImage)
+                        .resizable().scaledToFit().frame(width: 56, height: 56)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Simple Time Tracker").font(.headline)
+                        Text("Version \(appVersion)")
+                            .font(.caption).foregroundStyle(.secondary)
+                        Text("A native macOS menu bar time tracker.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+            }
+            Section("Developer") {
+                LabeledContent("Name", value: "Yedhu Krishnan")
+                LabeledContent("Email") {
+                    Link("dev@yedhu.me", destination: URL(string: "mailto:dev@yedhu.me")!)
+                }
+            }
+            Section {
+                LabeledContent("License", value: "MIT")
+                Text("© 2026 Yedhu Krishnan")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
+    }
+
+    private var appVersion: String {
+        let info = Bundle.main.infoDictionary
+        let short = info?["CFBundleShortVersionString"] as? String ?? "—"
+        let build = info?["CFBundleVersion"] as? String ?? "—"
+        return "\(short) (\(build))"
     }
 
     // MARK: - Helpers
