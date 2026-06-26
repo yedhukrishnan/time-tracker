@@ -39,6 +39,9 @@ struct TimeTrackerApp: App {
                     .scaledToFit()
                     .frame(width: 18, height: 18)
                 if model.tracking.isTracking {
+                    if model.tracking.isPaused {
+                        Image(systemName: "pause.fill").font(.system(size: 10))
+                    }
                     // Monospaced font for the numeric timer. (The menu bar item can
                     // still reflow as overall width changes — known cosmetic issue.)
                     Text(model.statusTitle)

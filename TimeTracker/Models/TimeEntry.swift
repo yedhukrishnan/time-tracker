@@ -32,6 +32,14 @@ final class TimeEntry {
     /// when the same entry is edited on two devices offline. Bump on every edit.
     var modifiedAt: Date = Date.now
 
+    /// Total seconds spent in *completed* pauses. Live (open) pause time is added
+    /// on the fly in `duration` and folded in here when the pause ends.
+    var pausedSeconds: Double = 0
+
+    /// When the session is currently paused, the moment the pause began.
+    /// `nil` means the session is actively running (or stopped).
+    var pauseStartedAt: Date?
+
     init(agenda: String = "", startedAt: Date = .now) {
         self.agenda = agenda
         self.startedAt = startedAt
@@ -41,8 +49,16 @@ final class TimeEntry {
 
     var isRunning: Bool { endedAt == nil }
 
-    /// Derived, never stored — avoids a denormalized field that could drift.
-    var duration: TimeInterval { (endedAt ?? .now).timeIntervalSince(startedAt) }
+    var isPaused: Bool { isRunning && pauseStartedAt != nil }
+
+    /// Active worked time — wall-clock span minus all paused time. Derived, never
+    /// stored, so editing start/end recomputes cleanly with no field to drift.
+    var duration: TimeInterval {
+        let endRef = endedAt ?? .now
+        var paused = pausedSeconds
+        if let ps = pauseStartedAt { paused += endRef.timeIntervalSince(ps) }
+        return max(0, endRef.timeIntervalSince(startedAt) - paused)
+    }
 
     /// Call after any user edit so sync can resolve conflicts correctly.
     func touch() { modifiedAt = .now }

@@ -60,7 +60,7 @@ struct HistoryView: View {
             }
         }
         .sheet(item: $editing) { entry in
-            WrapUpForm(entry: entry) { editing = nil }
+            WrapUpForm(entry: entry, isEditing: true) { editing = nil }
         }
     }
 

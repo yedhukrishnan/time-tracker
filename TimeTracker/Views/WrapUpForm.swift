@@ -1,32 +1,55 @@
 import SwiftUI
 
-/// Capture/edit the reflective fields of a session: what you achieved + a rating.
+/// Capture or edit a session's fields. Two modes:
+///   - quick wrap-up (default): just the reflective fields — achievement + rating —
+///     shown inline in the popover right after stopping.
+///   - full edit (`isEditing: true`): also lets you change the agenda and the
+///     start/end times, used as a sheet in History.
 ///
-/// Used in two places: inline in the popover right after stopping, and as a sheet
-/// in History for editing a past session. Edits are buffered locally and only
-/// written back on Save, so Cancel/Skip leaves the entry untouched.
+/// Edits are buffered in local state and only written back on Save, so Cancel/Skip
+/// leaves the entry untouched.
 struct WrapUpForm: View {
     let entry: TimeEntry
+    var isEditing: Bool = false
     var onDone: () -> Void
 
     @Environment(\.modelContext) private var context
+    @State private var agenda: String
     @State private var achievement: String
     @State private var rating: Int?
+    @State private var startedAt: Date
+    @State private var endedAt: Date
 
-    init(entry: TimeEntry, onDone: @escaping () -> Void) {
+    init(entry: TimeEntry, isEditing: Bool = false, onDone: @escaping () -> Void) {
         self.entry = entry
+        self.isEditing = isEditing
         self.onDone = onDone
+        _agenda = State(initialValue: entry.agenda)
         _achievement = State(initialValue: entry.achievement ?? "")
         _rating = State(initialValue: entry.rating)
+        _startedAt = State(initialValue: entry.startedAt)
+        _endedAt = State(initialValue: entry.endedAt ?? .now)
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text(entry.agenda.isEmpty ? "Session" : entry.agenda)
-                    .font(.headline).lineLimit(1)
+                Text(headerTitle).font(.headline).lineLimit(1)
                 Spacer()
-                Text(AppModel.format(entry.duration)).foregroundStyle(.secondary).monospacedDigit()
+                Text(AppModel.format(previewDuration))
+                    .foregroundStyle(.secondary).monospacedDigit()
+            }
+
+            if isEditing {
+                Text("Agenda").font(.subheadline)
+                TextField("What were you working on?", text: $agenda, axis: .vertical)
+                    .textFieldStyle(.roundedBorder)
+                    .lineLimit(1...3)
+
+                DatePicker("Start", selection: $startedAt,
+                           displayedComponents: [.date, .hourAndMinute])
+                DatePicker("End", selection: $endedAt, in: startedAt...,
+                           displayedComponents: [.date, .hourAndMinute])
             }
 
             Text("What did you get done?").font(.subheadline)
@@ -42,16 +65,32 @@ struct WrapUpForm: View {
 
             HStack {
                 Spacer()
-                Button("Skip", role: .cancel, action: onDone)
+                Button(isEditing ? "Cancel" : "Skip", role: .cancel, action: onDone)
                 Button("Save") { save() }
                     .keyboardShortcut(.defaultAction)
             }
         }
         .padding()
-        .frame(width: 320)
+        .frame(width: isEditing ? 360 : 320)
+    }
+
+    private var headerTitle: String {
+        if isEditing { return "Edit session" }
+        return entry.agenda.isEmpty ? "Session" : entry.agenda
+    }
+
+    /// Live duration preview while editing times; the saved value otherwise.
+    private var previewDuration: TimeInterval {
+        guard isEditing else { return entry.duration }
+        return max(0, endedAt.timeIntervalSince(startedAt) - entry.pausedSeconds)
     }
 
     private func save() {
+        if isEditing {
+            entry.agenda = agenda.trimmingCharacters(in: .whitespacesAndNewlines)
+            entry.startedAt = startedAt
+            entry.endedAt = max(endedAt, startedAt)   // never end before start
+        }
         entry.achievement = achievement.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             ? nil : achievement
         entry.rating = rating

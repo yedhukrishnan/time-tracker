@@ -64,20 +64,38 @@ struct MenuBarContentView: View {
     // MARK: - Running
 
     private func runningSection(_ entry: TimeEntry) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Image(systemName: "record.circle").foregroundStyle(.red)
+        let paused = model.tracking.isPaused
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: paused ? "pause.circle.fill" : "record.circle")
+                    .foregroundStyle(paused ? .orange : .red)
                 Text(model.statusTitle).font(.title2).monospacedDigit().bold()
+                if paused {
+                    Text("Paused").font(.caption).foregroundStyle(.secondary)
+                }
                 Spacer()
             }
             if !entry.agenda.isEmpty {
                 Text(entry.agenda).foregroundStyle(.secondary).lineLimit(2)
             }
-            Button(role: .destructive, action: stopSession) {
-                Label("Stop", systemImage: "stop.fill").frame(maxWidth: .infinity)
+            HStack {
+                Button(action: togglePause) {
+                    Label(paused ? "Resume" : "Pause",
+                          systemImage: paused ? "play.fill" : "pause.fill")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                Button(role: .destructive, action: stopSession) {
+                    Label("Stop", systemImage: "stop.fill").frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
             }
-            .buttonStyle(.borderedProminent)
         }
+    }
+
+    private func togglePause() {
+        if model.tracking.isPaused { model.tracking.resume() }
+        else { model.tracking.pause() }
     }
 
     // MARK: - Today list
