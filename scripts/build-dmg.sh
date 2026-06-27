@@ -10,7 +10,7 @@
 #
 # Prerequisites:
 #   - A "Developer ID Application" certificate in your keychain
-#     (Xcode ▸ Settings ▸ Accounts ▸ Manage Certificates ▸ + ▸ Developer ID Application).
+#     (Xcode > Settings > Accounts > Manage Certificates > + > Developer ID Application).
 #   - You're signed into your Apple ID in Xcode so it can manage the Developer ID
 #     provisioning profile (needed because the app uses iCloud/Push entitlements).
 #
@@ -43,7 +43,7 @@ command -v xcodebuild >/dev/null || { echo "error: xcodebuild not found (install
 [ -d "$PROJECT" ] || { echo "error: $PROJECT not found. Run from the repo root."; exit 1; }
 
 # --- 1. Archive (Release) --------------------------------------------------
-echo "==> Archiving $SCHEME…"
+echo "==> Archiving $SCHEME..."
 rm -rf "$BUILD_DIR"
 xcodebuild \
   -project "$PROJECT" \
@@ -56,7 +56,7 @@ xcodebuild \
 # --- 2. Export with Developer ID ------------------------------------------
 # Signs with your Developer ID Application cert and embeds a Developer ID
 # provisioning profile that authorizes the iCloud/Push entitlements.
-echo "==> Exporting Developer ID build…"
+echo "==> Exporting Developer ID build..."
 cat > "$BUILD_DIR/ExportOptions.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -83,7 +83,7 @@ APP_PATH="$EXPORT_DIR/$SCHEME.app"
 echo "==> Exported (Developer ID signed): $APP_PATH"
 
 # --- 3. Package the .dmg ---------------------------------------------------
-echo "==> Staging disk image…"
+echo "==> Staging disk image..."
 STAGING="$(mktemp -d)"
 trap 'rm -rf "$STAGING"' EXIT
 cp -R "$APP_PATH" "$STAGING/$VOL_NAME.app"
@@ -91,7 +91,7 @@ ln -s /Applications "$STAGING/Applications"
 
 mkdir -p "$DIST_DIR"
 rm -f "$DMG_PATH"
-echo "==> Creating $DMG_PATH…"
+echo "==> Creating $DMG_PATH..."
 hdiutil create -volname "$VOL_NAME" -srcfolder "$STAGING" -ov -format UDZO "$DMG_PATH" >/dev/null
 
 echo
