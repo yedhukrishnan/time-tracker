@@ -28,11 +28,10 @@
 	<key>LSUIElement</key>
 	<true/>
 
-	<!-- For iCloud sync, also add (requires the cloud entitlements + paid account):
+	<!-- Lets CloudKit push change notifications so sync happens in the background. -->
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
 	</array>
-	-->
 </dict>
 </plist>

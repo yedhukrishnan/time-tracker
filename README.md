@@ -48,21 +48,27 @@ for when you're ready (see below).
 
 Sync is wired in code (`ModelConfiguration(..., cloudKitDatabase: .automatic)` —
 which uses CloudKit when the entitlement is present and falls back to a local
-store otherwise), but needs a **paid** account, project capabilities, and a
-container:
+store otherwise), but needs a **paid** account plus capabilities, a container,
+and a deployed schema:
 
-0. Point **Build Settings → Code Signing Entitlements** at
-   `TimeTracker/TimeTracker.cloud.entitlements`, and uncomment the
-   `UIBackgroundModes` block in `Info.plist`.
 1. Set your **Team** in **Signing & Capabilities**.
-2. Add the **iCloud** capability → check **CloudKit** → add a container, e.g.
-   `iCloud.com.yedhu.TimeTracker`.
-3. Add the **Background Modes** capability → check **Remote notifications**.
-4. Make sure the container id matches the one in `TimeTracker.entitlements`.
-5. Build, run, sign into iCloud on two Macs to see data mirror across them.
+2. Add capabilities (Xcode writes the entitlements for you):
+   - **iCloud** → check **CloudKit** → add container `iCloud.com.yedhu.TimeTracker`.
+   - **Push Notifications** (adds `aps-environment`, for change pushes).
+   - **Background Modes** → check **Remote notifications** (also in `Info.plist`).
+3. **Deploy the schema to Production.** A debug build uses the CloudKit
+   *Development* environment; a notarized Developer ID build uses *Production*.
+   In the CloudKit Dashboard, promote your schema from Development → Production,
+   or release builds sync nothing while your dev build works fine.
+4. Build, run, sign into iCloud on two Macs to see data mirror across them.
 
-If sync silently doesn't work, it's almost always a mismatched container id or a
-missing capability — check the CloudKit Dashboard.
+If sync silently does nothing, the usual causes are: schema not deployed to
+Production, a mismatched container id, or a missing capability — check the
+CloudKit Dashboard.
+
+> `TimeTracker.cloud.entitlements` is a reference copy of the full entitlement
+> set. Once you add the capabilities above, Xcode maintains the active
+> `TimeTracker.entitlements`, so the cloud file is no longer wired into the build.
 
 ## Forking / building your own copy
 
