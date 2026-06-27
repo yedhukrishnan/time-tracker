@@ -40,6 +40,7 @@ xcodebuild \
   -scheme "$SCHEME" \
   -configuration "$CONFIG" \
   -derivedDataPath "$BUILD_DIR" \
+  -allowProvisioningUpdates \
   clean build \
   CODE_SIGN_STYLE=Automatic \
   | tail -20
