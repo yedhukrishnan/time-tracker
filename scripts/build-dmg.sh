@@ -6,22 +6,27 @@
 # Run on macOS with Xcode installed:
 #     ./scripts/build-dmg.sh
 #
-# Output: dist/TimeTracker.dmg  (sign-then-notarize; notarize commands printed)
+# Output: dist/TimeTracker.dmg  (signed; notarized + stapled if NOTARY_PROFILE set)
 #
 # Prerequisites:
 #   - A "Developer ID Application" certificate in your keychain
 #     (Xcode > Settings > Accounts > Manage Certificates > + > Developer ID Application).
 #   - You're signed into your Apple ID in Xcode so it can manage the Developer ID
 #     provisioning profile (needed because the app uses iCloud/Push entitlements).
+#   - For notarization, save a credential once (then set NOTARY_PROFILE):
+#       xcrun notarytool store-credentials <profile-name> \
+#         --apple-id <your-apple-id> --team-id <TEAM_ID>
 #
 # Why archive+export (not plain `build`): `xcodebuild build` defaults to
 # *development* signing, which on macOS needs your Mac registered as a device.
 # The Developer ID export path uses a device-independent distribution profile.
 #
 # Optional environment variables:
-#   TEAM_ID    Apple Developer Team ID            (default: T7U7ZSM986)
-#   SCHEME     Xcode scheme                        (default: TimeTracker)
-#   VOL_NAME   Volume + .app display name          (default: "Time Tracker")
+#   TEAM_ID         Apple Developer Team ID         (default: T7U7ZSM986)
+#   SCHEME          Xcode scheme                     (default: TimeTracker)
+#   VOL_NAME        Volume + .app display name       (default: "Time Tracker")
+#   NOTARY_PROFILE  notarytool keychain profile name; if set, the DMG is
+#                   notarized and stapled automatically.
 #
 set -euo pipefail
 
@@ -94,11 +99,24 @@ rm -f "$DMG_PATH"
 echo "==> Creating $DMG_PATH..."
 hdiutil create -volname "$VOL_NAME" -srcfolder "$STAGING" -ov -format UDZO "$DMG_PATH" >/dev/null
 
-echo
-echo "Done (signed, not yet notarized): $DMG_PATH"
-echo
-echo "Notarize and staple so it opens cleanly on other Macs:"
-echo "  xcrun notarytool submit \"$DMG_PATH\" --keychain-profile <profile> --wait"
-echo "  xcrun stapler staple \"$DMG_PATH\""
-echo "Then verify:"
-echo "  spctl -a -vvv -t install \"$DMG_PATH\""
+# --- 4. Notarize + staple (if a credential profile is provided) ------------
+if [ -n "${NOTARY_PROFILE:-}" ]; then
+  echo "==> Notarizing (profile: $NOTARY_PROFILE)... this can take a few minutes"
+  xcrun notarytool submit "$DMG_PATH" --keychain-profile "$NOTARY_PROFILE" --wait
+  echo "==> Stapling the ticket onto the DMG..."
+  xcrun stapler staple "$DMG_PATH"
+  echo "==> Verifying Gatekeeper acceptance..."
+  spctl -a -vvv -t install "$DMG_PATH" || true
+  echo
+  echo "Done (signed + notarized + stapled): $DMG_PATH"
+  echo "This DMG opens cleanly on other Macs."
+else
+  echo
+  echo "Done (signed, NOT notarized): $DMG_PATH"
+  echo "It runs on THIS Mac, but other Macs will show a Gatekeeper warning."
+  echo
+  echo "To notarize automatically: save a credential once, then re-run:"
+  echo "  xcrun notarytool store-credentials timetracker \\"
+  echo "    --apple-id <your-apple-id> --team-id $TEAM_ID"
+  echo "  NOTARY_PROFILE=timetracker ./scripts/build-dmg.sh"
+fi
