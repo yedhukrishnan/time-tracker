@@ -55,7 +55,10 @@ and a deployed schema:
 2. Add capabilities (Xcode writes the entitlements for you):
    - **iCloud** → check **CloudKit** → add container `iCloud.com.yedhu.TimeTracker`.
    - **Push Notifications** (adds `aps-environment`, for change pushes).
-   - **Background Modes** → check **Remote notifications** (also in `Info.plist`).
+
+   That's the full macOS set. The iOS "Background Modes → Remote notifications"
+   mode does **not** apply to macOS — CloudKit push here comes from the Push
+   Notifications capability.
 3. **Deploy the schema to Production.** A debug build uses the CloudKit
    *Development* environment; a notarized Developer ID build uses *Production*.
    In the CloudKit Dashboard, promote your schema from Development → Production,

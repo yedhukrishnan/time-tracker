@@ -28,10 +28,8 @@
 	<key>LSUIElement</key>
 	<true/>
 
-	<!-- Lets CloudKit push change notifications so sync happens in the background. -->
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>remote-notification</string>
-	</array>
+	<!-- Note: CloudKit push on macOS comes from the Push Notifications capability
+	     (aps-environment), not a background mode. The iOS "remote-notification"
+	     UIBackgroundModes key does not apply to macOS. -->
 </dict>
 </plist>
