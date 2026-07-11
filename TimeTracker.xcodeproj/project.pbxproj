@@ -12,6 +12,7 @@
 		2C33773E5351A9CE869ECF59 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EED609C0C867BB844C70DA55 /* HistoryView.swift */; };
 		3B08B3A7215A6FAB976576EB /* WorkHours.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21D658074F07FC7A3FB2B83B /* WorkHours.swift */; };
 		45595D001E2A3A4E9F40646C /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7789D46B0CA7D6869F36075F /* AppModel.swift */; };
+		50CDF7093002594600BD1B91 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 50CDF7083002594600BD1B91 /* AppIcon.icon */; };
 		701CDFE9F925ECB6D1AD2778 /* TimeTrackerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B173286388839F33C3FAA564 /* TimeTrackerApp.swift */; };
 		A91D6CDDED7882548E641E7E /* TrackingController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71CD0429F6273AD0D74A1570 /* TrackingController.swift */; };
 		AABF4901C8375D49CB065118 /* WorkSchedule.swift in Sources */ = {isa = PBXBuildFile; fileRef = B91B7B0092B4596E231A58AB /* WorkSchedule.swift */; };
@@ -30,6 +31,7 @@
 		21D658074F07FC7A3FB2B83B /* WorkHours.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkHours.swift; sourceTree = "<group>"; };
 		2688D7280A1EC4CA87D15AC8 /* WrapUpForm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WrapUpForm.swift; sourceTree = "<group>"; };
 		32C36FF41A16F3ABF1D997E7 /* MenuBarContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarContentView.swift; sourceTree = "<group>"; };
+		50CDF7083002594600BD1B91 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		71CD0429F6273AD0D74A1570 /* TrackingController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackingController.swift; sourceTree = "<group>"; };
 		7789D46B0CA7D6869F36075F /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		943B4D377432DA396308BDAB /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -55,6 +57,7 @@
 		23A04BA123C3A848B2DF118C /* TimeTracker */ = {
 			isa = PBXGroup;
 			children = (
+				50CDF7083002594600BD1B91 /* AppIcon.icon */,
 				943B4D377432DA396308BDAB /* Assets.xcassets */,
 				B173286388839F33C3FAA564 /* TimeTrackerApp.swift */,
 				3A1F9AB2B69CB4588D1F65B7 /* Models */,
@@ -174,6 +177,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				ED0CD3B09DB0CF5AB40932D3 /* Assets.xcassets in Resources */,
+				50CDF7093002594600BD1B91 /* AppIcon.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
