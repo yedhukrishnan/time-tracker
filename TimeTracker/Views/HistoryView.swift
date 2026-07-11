@@ -3,7 +3,7 @@ import SwiftData
 
 /// The data surface — review and edit past sessions. Grouped by day, newest
 /// first, with per-day totals. Everything is editable after the fact (the
-/// mutability decision): tap a row to edit, or delete.
+/// mutability decision): click a card to edit, hover or right-click to delete.
 struct HistoryView: View {
     @Environment(\.modelContext) private var context
     @Query(sort: \TimeEntry.startedAt, order: .reverse) private var entries: [TimeEntry]
@@ -32,42 +32,22 @@ struct HistoryView: View {
         return buckets.keys.sorted(by: >).map { ($0, buckets[$0]!) }
     }
 
+    /// True when filters are hiding entries that do exist.
+    private var isFiltering: Bool { minRating > 0 || !searchText.isEmpty }
+
     var body: some View {
-        VStack(spacing: 0) {
-            toolbar
-            Divider()
+        Group {
             if grouped.isEmpty {
-                ContentUnavailableView("No sessions", systemImage: "clock",
-                                       description: Text("Tracked sessions will appear here."))
-                    .frame(maxHeight: .infinity)
+                emptyState
             } else {
-                List {
-                    ForEach(grouped, id: \.day) { group in
-                        Section {
-                            ForEach(group.items) { entry in
-                                row(entry).contentShape(Rectangle())
-                                    .onTapGesture { editing = entry }
-                                    .contextMenu {
-                                        Button("Edit…") { editing = entry }
-                                        Button("Delete…", role: .destructive) { pendingDelete = entry }
-                                    }
-                            }
-                            // Swipe-to-delete routes through confirmation rather than
-                            // deleting immediately.
-                            .onDelete { offsets in
-                                if let i = offsets.first { pendingDelete = group.items[i] }
-                            }
-                        } header: {
-                            HStack {
-                                Text(group.day, format: .dateTime.weekday(.wide).month().day())
-                                Spacer()
-                                Text(dayTotal(group.items)).foregroundStyle(.secondary).monospacedDigit()
-                            }
-                        }
-                    }
-                }
+                sessionList
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(nsColor: .windowBackgroundColor))
+        // The filter bar floats above the scroll content on a material, so
+        // cards visibly slide beneath it — cheap depth without extra chrome.
+        .safeAreaInset(edge: .top, spacing: 0) { filterBar }
         .sheet(item: $editing) { entry in
             WrapUpForm(entry: entry, isEditing: true) { editing = nil }
         }
@@ -82,54 +62,258 @@ struct HistoryView: View {
         }
     }
 
-    private var toolbar: some View {
-        HStack {
-            TextField("Search agenda or achievement", text: $searchText)
-                .textFieldStyle(.roundedBorder).frame(maxWidth: 260)
+    // MARK: - Filter bar
+
+    private var filterBar: some View {
+        HStack(spacing: 12) {
+            searchField
             Spacer()
-            Picker("Min rating", selection: $minRating) {
-                Text("Any").tag(0)
-                ForEach(1...5, id: \.self) { Text("★ \($0)+").tag($0) }
-            }
-            .pickerStyle(.menu).fixedSize()
+            Text(summary)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .monospacedDigit()
+            ratingFilter
         }
-        .padding(10)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(.bar)
+        .overlay(alignment: .bottom) { Divider() }
     }
 
-    private func row(_ entry: TimeEntry) -> some View {
-        HStack(alignment: .top, spacing: 10) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(timeRange(entry)).font(.caption).monospacedDigit().foregroundStyle(.secondary)
-                Text(entry.agenda.isEmpty ? "—" : entry.agenda).font(.body).lineLimit(1)
-                if let a = entry.achievement, !a.isEmpty {
-                    Text(a).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+    private var searchField: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+            TextField("Search sessions", text: $searchText)
+                .textFieldStyle(.plain)
+                .font(.system(size: 13))
+            if !searchText.isEmpty {
+                Button { searchText = "" } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
                 }
-            }
-            Spacer()
-            VStack(alignment: .trailing, spacing: 4) {
-                Text(AppModel.format(entry.duration)).font(.caption).monospacedDigit()
-                if let r = entry.rating {
-                    Text(String(repeating: "★", count: r)).font(.caption).foregroundStyle(.yellow)
-                }
+                .buttonStyle(.plain)
             }
         }
-        .padding(.vertical, 2)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(RoundedRectangle(cornerRadius: 7, style: .continuous)
+            .fill(Color.primary.opacity(0.05)))
+        .frame(maxWidth: 240)
     }
 
-    private func timeRange(_ e: TimeEntry) -> String {
-        let f = Date.FormatStyle.dateTime.hour().minute()
-        let start = e.startedAt.formatted(f)
-        let end = e.endedAt?.formatted(f) ?? "…"
-        return "\(start)–\(end)"
+    private var ratingFilter: some View {
+        Menu {
+            Picker("Minimum rating", selection: $minRating) {
+                Text("Any rating").tag(0)
+                ForEach(1...5, id: \.self) { n in
+                    Text("\(String(repeating: "★", count: n))\(n < 5 ? " and up" : "")").tag(n)
+                }
+            }
+            .pickerStyle(.inline)
+        } label: {
+            HStack(spacing: 3) {
+                Image(systemName: minRating > 0 ? "star.fill" : "line.3.horizontal.decrease")
+                    .font(.system(size: 11))
+                if minRating > 0 {
+                    Text("\(minRating)+").font(.caption.weight(.medium))
+                }
+            }
+            .foregroundStyle(minRating > 0 ? AnyShapeStyle(.yellow) : AnyShapeStyle(.secondary))
+        }
+        .menuStyle(.button)
+        .buttonStyle(.borderless)
+        .fixedSize()
+        .help("Filter by minimum rating")
+    }
+
+    /// "12 sessions · 8h 34m" for whatever the filters currently show.
+    private var summary: String {
+        let total = filtered.reduce(0) { $0 + $1.duration }
+        let noun = filtered.count == 1 ? "session" : "sessions"
+        return "\(filtered.count) \(noun) · \(AppModel.format(total))"
+    }
+
+    // MARK: - Session list
+
+    private var sessionList: some View {
+        ScrollView {
+            LazyVStack(spacing: 0, pinnedViews: .sectionHeaders) {
+                ForEach(grouped, id: \.day) { group in
+                    Section {
+                        VStack(spacing: 6) {
+                            ForEach(group.items) { entry in
+                                SessionRow(entry: entry,
+                                           onEdit: { editing = entry },
+                                           onDelete: { pendingDelete = entry })
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.top, 2)
+                        .padding(.bottom, 18)
+                    } header: {
+                        dayHeader(day: group.day, items: group.items)
+                    }
+                }
+            }
+            .padding(.bottom, 8)
+        }
+    }
+
+    private func dayHeader(day: Date, items: [TimeEntry]) -> some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text(dayLabel(day))
+                .font(.system(size: 13, weight: .semibold))
+            Spacer()
+            Text(dayTotal(items))
+                .font(.system(size: 12))
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(.bar)   // stays legible while cards scroll underneath
+    }
+
+    /// "Today" / "Yesterday" for recency, otherwise the full date (with year
+    /// only when it isn't this year's).
+    private func dayLabel(_ day: Date) -> String {
+        let cal = Calendar.current
+        if cal.isDateInToday(day) { return "Today" }
+        if cal.isDateInYesterday(day) { return "Yesterday" }
+        let sameYear = cal.component(.year, from: day) == cal.component(.year, from: .now)
+        let style: Date.FormatStyle = sameYear
+            ? .dateTime.weekday(.wide).month().day()
+            : .dateTime.weekday(.wide).month().day().year()
+        return day.formatted(style)
     }
 
     private func dayTotal(_ items: [TimeEntry]) -> String {
         AppModel.format(items.reduce(0) { $0 + $1.duration })
     }
 
+    // MARK: - Empty state
+
+    private var emptyState: some View {
+        Group {
+            if isFiltering {
+                ContentUnavailableView {
+                    Label("No matching sessions", systemImage: "magnifyingglass")
+                } description: {
+                    Text("Try a different search or rating filter.")
+                } actions: {
+                    Button("Clear Filters") { searchText = ""; minRating = 0 }
+                }
+            } else {
+                ContentUnavailableView("No sessions yet", systemImage: "clock",
+                                       description: Text("Tracked sessions will appear here."))
+            }
+        }
+        .frame(maxHeight: .infinity)
+    }
+
     private func performDelete(_ entry: TimeEntry) {
         context.delete(entry)
         try? context.save()
         pendingDelete = nil
+    }
+}
+
+// MARK: - Session row
+
+/// One session as a quiet card: agenda leads, achievement and time range
+/// support, duration sits in a capsule on the right. Hover raises the card
+/// slightly and reveals a delete affordance (swipe-to-delete doesn't exist
+/// outside List, so hover + context menu cover deletion).
+private struct SessionRow: View {
+    let entry: TimeEntry
+    var onEdit: () -> Void
+    var onDelete: () -> Void
+
+    @State private var hovering = false
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(entry.agenda.isEmpty ? "Untitled session" : entry.agenda)
+                    .font(.system(size: 13, weight: .medium))
+                    .lineLimit(1)
+                if let a = entry.achievement, !a.isEmpty {
+                    Text(a)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+                Text(timeRange)
+                    .font(.system(size: 11))
+                    .monospacedDigit()
+                    .foregroundStyle(.tertiary)
+                    .padding(.top, 1)
+            }
+            Spacer(minLength: 12)
+            VStack(alignment: .trailing, spacing: 5) {
+                Text(AppModel.format(entry.duration))
+                    .font(.caption.weight(.medium))
+                    .monospacedDigit()
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 2)
+                    .background(Capsule().fill(Color.primary.opacity(0.06)))
+                if let r = entry.rating {
+                    HStack(spacing: 1.5) {
+                        ForEach(0..<r, id: \.self) { _ in
+                            Image(systemName: "star.fill")
+                        }
+                    }
+                    .font(.system(size: 8))
+                    .foregroundStyle(.yellow)
+                }
+            }
+            if hovering {
+                DeleteButton(action: onDelete)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 9)
+        .background(RoundedRectangle(cornerRadius: 8, style: .continuous)
+            .fill(Color.primary.opacity(hovering ? 0.075 : 0.04)))
+        .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .onHover { hovering = $0 }
+        .animation(.easeOut(duration: 0.12), value: hovering)
+        .onTapGesture(perform: onEdit)
+        .contextMenu {
+            Button("Edit…", action: onEdit)
+            Button("Delete…", role: .destructive, action: onDelete)
+        }
+    }
+
+    /// Hover-revealed delete affordance. The icon stays small, but the hit
+    /// target is a full 24×24pt circle that highlights on its own hover so
+    /// it's both easy to aim at and clearly separate from tap-to-edit.
+    private struct DeleteButton: View {
+        var action: () -> Void
+        @State private var hovering = false
+
+        var body: some View {
+            Button(action: action) {
+                Image(systemName: "trash")
+                    .font(.system(size: 12))
+                    .foregroundStyle(hovering ? AnyShapeStyle(.red) : AnyShapeStyle(.secondary))
+                    .frame(width: 24, height: 24)
+                    .background(Circle().fill(Color.primary.opacity(hovering ? 0.08 : 0)))
+                    .contentShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .onHover { hovering = $0 }
+            .help("Delete session")
+        }
+    }
+
+    private var timeRange: String {
+        let f = Date.FormatStyle.dateTime.hour().minute()
+        let start = entry.startedAt.formatted(f)
+        let end = entry.endedAt?.formatted(f) ?? "…"
+        return "\(start) – \(end)"
     }
 }
