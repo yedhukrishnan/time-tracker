@@ -14,6 +14,7 @@ final class AppModel {
     let tracking: TrackingController
     let nudge: NudgeScheduler
     let sessionMonitor: SessionMonitor
+    let quickPanel: QuickPanelController
     private let notificationRouter: NotificationRouter
     private(set) var settings: AppSettings
 
@@ -22,6 +23,7 @@ final class AppModel {
         self.tracking = TrackingController(context: context)
         self.nudge = NudgeScheduler()
         self.sessionMonitor = SessionMonitor()
+        self.quickPanel = QuickPanelController()
         self.notificationRouter = NotificationRouter()
         self.settings = AppModel.fetchOrCreateSettings(context)
     }
@@ -61,6 +63,9 @@ final class AppModel {
         }
         nudge.start(router: notificationRouter)
         sessionMonitor.start(router: notificationRouter)
+
+        // Global hotkey → Spotlight-style quick panel (start/pause/stop).
+        quickPanel.start(model: self)
 
         LoginItem.setEnabled(settings.launchAtLogin)
     }

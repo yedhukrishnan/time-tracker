@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import AppKit
+import KeyboardShortcuts
 
 /// Settings: work hours, the nudge, general options, and about.
 struct SettingsView: View {
@@ -99,12 +100,19 @@ struct SettingsView: View {
 
     private var generalTab: some View {
         Form {
-            Toggle("Launch at login", isOn: Binding(
-                get: { model.settings.launchAtLogin },
-                set: { model.setLaunchAtLogin($0) }
-            ))
-            Text("Keeps the app running so nudges fire when your day starts.")
-                .font(.caption).foregroundStyle(.secondary)
+            Section {
+                Toggle("Launch at login", isOn: Binding(
+                    get: { model.settings.launchAtLogin },
+                    set: { model.setLaunchAtLogin($0) }
+                ))
+                Text("Keeps the app running so nudges fire when your day starts.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Section {
+                KeyboardShortcuts.Recorder("Quick panel shortcut", name: .toggleQuickPanel)
+                Text("Opens the quick panel from any app — type an agenda to start, or pause/stop a running session.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
         }
         .formStyle(.grouped)
     }

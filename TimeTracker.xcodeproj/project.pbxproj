@@ -25,6 +25,9 @@
 		ED0CD3B09DB0CF5AB40932D3 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 943B4D377432DA396308BDAB /* Assets.xcassets */; };
 		F88C5FBBE3EEC24CFB1EF6EB /* StarRating.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3C2A4E8B4985D4EC1B5FE70 /* StarRating.swift */; };
 		FE6DB63EE18FEF2739EDF31F /* TimeEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 079E4EE3710D229304251229 /* TimeEntry.swift */; };
+		9C3D4E5F60718293A4B5C6D7 /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = 8B2C3D4E5F60718293A4B5C6 /* KeyboardShortcuts */; };
+		CF60718293A4B5C6D7E8F90A /* QuickPanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE5F60718293A4B5C6D7E8F9 /* QuickPanelController.swift */; };
+		E18293A4C5D6E7F8091A2B3C /* QuickPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0718293A4B5C6D7E8F90A1B /* QuickPanelView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -47,7 +50,20 @@
 		C3C2A4E8B4985D4EC1B5FE70 /* StarRating.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StarRating.swift; sourceTree = "<group>"; };
 		E5E6C3CF40AA1A1ED7E12EEF /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		EED609C0C867BB844C70DA55 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
+		BE5F60718293A4B5C6D7E8F9 /* QuickPanelController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickPanelController.swift; sourceTree = "<group>"; };
+		D0718293A4B5C6D7E8F90A1B /* QuickPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickPanelView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		AD4E5F60718293A4B5C6D7E8 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9C3D4E5F60718293A4B5C6D7 /* KeyboardShortcuts in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		05A133EDB93358386B71DC81 /* Products */ = {
@@ -96,6 +112,7 @@
 				B8196A94A20307BFCFDEA52F /* LoginItem.swift */,
 				1A2B3C4D5E6F708192A3B4C5 /* NotificationRouter.swift */,
 				1C4F68E352A6E6CDCDA34E7A /* NudgeScheduler.swift */,
+				BE5F60718293A4B5C6D7E8F9 /* QuickPanelController.swift */,
 				3C4D5E6F708192A3B4C5D6E7 /* SessionMonitor.swift */,
 				71CD0429F6273AD0D74A1570 /* TrackingController.swift */,
 				21D658074F07FC7A3FB2B83B /* WorkHours.swift */,
@@ -116,6 +133,7 @@
 			children = (
 				EED609C0C867BB844C70DA55 /* HistoryView.swift */,
 				32C36FF41A16F3ABF1D997E7 /* MenuBarContentView.swift */,
+				D0718293A4B5C6D7E8F90A1B /* QuickPanelView.swift */,
 				E5E6C3CF40AA1A1ED7E12EEF /* SettingsView.swift */,
 				2688D7280A1EC4CA87D15AC8 /* WrapUpForm.swift */,
 				8797629D98770CD9F6E4E440 /* Components */,
@@ -131,6 +149,7 @@
 			buildConfigurationList = F77AABD9D94F31297D9AFBDF /* Build configuration list for PBXNativeTarget "TimeTracker" */;
 			buildPhases = (
 				578AA88EABA6854EB589F889 /* Sources */,
+				AD4E5F60718293A4B5C6D7E8 /* Frameworks */,
 				FDC7E62DB5D8B923924844BD /* Resources */,
 			);
 			buildRules = (
@@ -139,6 +158,7 @@
 			);
 			name = TimeTracker;
 			packageProductDependencies = (
+				8B2C3D4E5F60718293A4B5C6 /* KeyboardShortcuts */,
 			);
 			productName = TimeTracker;
 			productReference = A5474E4E0BCDFAF982ABA880 /* TimeTracker.app */;
@@ -167,6 +187,9 @@
 			);
 			mainGroup = 37D66370DC196F67598746FF;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				7A1B2C3D4E5F60718293A4B5 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 05A133EDB93358386B71DC81 /* Products */;
 			projectDirPath = "";
@@ -202,6 +225,8 @@
 				2B3C4D5E6F708192A3B4C5D6 /* NotificationRouter.swift in Sources */,
 				CEAEE3EFBC5B82F946219774 /* NudgeScheduler.swift in Sources */,
 				4D5E6F708192A3B4C5D6E7F8 /* SessionMonitor.swift in Sources */,
+				CF60718293A4B5C6D7E8F90A /* QuickPanelController.swift in Sources */,
+				E18293A4C5D6E7F8091A2B3C /* QuickPanelView.swift in Sources */,
 				D73662FBB6D9C334B3273A2E /* SettingsView.swift in Sources */,
 				F88C5FBBE3EEC24CFB1EF6EB /* StarRating.swift in Sources */,
 				FE6DB63EE18FEF2739EDF31F /* TimeEntry.swift in Sources */,
@@ -409,6 +434,25 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		7A1B2C3D4E5F60718293A4B5 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sindresorhus/KeyboardShortcuts";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		8B2C3D4E5F60718293A4B5C6 /* KeyboardShortcuts */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7A1B2C3D4E5F60718293A4B5 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */;
+			productName = KeyboardShortcuts;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 0ABDC2A596C9BAAF0F20A631 /* Project object */;
 }
