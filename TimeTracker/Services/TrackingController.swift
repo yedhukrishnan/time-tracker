@@ -70,14 +70,17 @@ final class TrackingController {
     }
 
     /// End the running session and return it for wrap-up (achievement + rating).
+    /// Pass `at:` to backdate the end (e.g. "end when I left" after being away);
+    /// it is clamped to the session's span so duration can't go negative.
     @discardableResult
-    func stop() -> TimeEntry? {
+    func stop(at end: Date = .now) -> TimeEntry? {
         guard let entry = running else { return nil }
+        let end = max(end, entry.startedAt)
         if let ps = entry.pauseStartedAt {          // close an open pause first
-            entry.pausedSeconds += Date.now.timeIntervalSince(ps)
+            entry.pausedSeconds += max(0, end.timeIntervalSince(ps))
             entry.pauseStartedAt = nil
         }
-        entry.endedAt = .now
+        entry.endedAt = end
         entry.touch()
         running = nil
         elapsed = 0
@@ -86,6 +89,18 @@ final class TrackingController {
         save()
         onChange()
         return entry
+    }
+
+    /// Fold time the user was away into paused time, so it doesn't count as
+    /// active work (the "subtract away time" repair from SessionMonitor).
+    func subtractAway(seconds: TimeInterval) {
+        guard let entry = running, seconds > 0 else { return }
+        // Never subtract more than the active time actually accumulated.
+        entry.pausedSeconds += min(seconds, entry.duration)
+        entry.touch()
+        elapsed = entry.duration
+        save()
+        onChange()
     }
 
     /// On launch, adopt any session left running (app was quit mid-session).

@@ -13,12 +13,16 @@ final class AppModel {
     let context: ModelContext
     let tracking: TrackingController
     let nudge: NudgeScheduler
+    let sessionMonitor: SessionMonitor
+    private let notificationRouter: NotificationRouter
     private(set) var settings: AppSettings
 
     init(context: ModelContext) {
         self.context = context
         self.tracking = TrackingController(context: context)
         self.nudge = NudgeScheduler()
+        self.sessionMonitor = SessionMonitor()
+        self.notificationRouter = NotificationRouter()
         self.settings = AppModel.fetchOrCreateSettings(context)
     }
 
@@ -27,6 +31,8 @@ final class AppModel {
         dedupeSchedules()
         seedDefaultScheduleIfNeeded()
 
+        notificationRouter.start()   // delegate + auth, before schedulers register
+
         nudge.isTrackingProvider = { [weak self] in self?.tracking.isTracking ?? false }
         nudge.settingsProvider = { [weak self] in self?.settings }
         nudge.schedulesProvider = { [weak self] in self?.allSchedules() ?? [] }
@@ -34,9 +40,27 @@ final class AppModel {
             guard let self, !self.tracking.isTracking else { return }
             self.tracking.start(agenda: "")
         }
-        // Rebuild the nudge schedule whenever tracking state changes.
-        tracking.onChange = { [weak self] in self?.nudge.reschedule() }
-        nudge.start()
+
+        sessionMonitor.settingsProvider = { [weak self] in self?.settings }
+        sessionMonitor.runningProvider = { [weak self] in self?.tracking.running }
+        sessionMonitor.isPausedProvider = { [weak self] in self?.tracking.isPaused ?? false }
+        sessionMonitor.onSubtractAway = { [weak self] seconds in
+            self?.tracking.subtractAway(seconds: seconds)
+        }
+        sessionMonitor.onStopBackdated = { [weak self] date in
+            self?.tracking.stop(at: date)
+        }
+        sessionMonitor.onStopRequested = { [weak self] in
+            self?.tracking.stop()
+        }
+
+        // Rebuild both schedules whenever tracking state changes.
+        tracking.onChange = { [weak self] in
+            self?.nudge.reschedule()
+            self?.sessionMonitor.reschedule()
+        }
+        nudge.start(router: notificationRouter)
+        sessionMonitor.start(router: notificationRouter)
 
         LoginItem.setEnabled(settings.launchAtLogin)
     }

@@ -15,7 +15,7 @@ import UserNotifications
 /// (start-of-day + k·interval), so rebuilds are stable — an already-planned 9:15
 /// nudge stays at 9:15 instead of being pushed forward on every rebuild.
 @MainActor
-final class NudgeScheduler: NSObject {
+final class NudgeScheduler {
 
     // Injected reads — set by AppModel after wiring.
     var isTrackingProvider: () -> Bool = { false }
@@ -36,11 +36,9 @@ final class NudgeScheduler: NSObject {
     private let snoozeDuration: TimeInterval = 30 * 60
     private let maxScheduled = 32        // stay well under the OS's 64-pending cap
 
-    /// Call once at launch.
-    func start() {
-        center.delegate = self
-        registerCategory()
-        requestAuthorization()
+    /// Call once at launch, after `router.start()`.
+    func start(router: NotificationRouter) {
+        registerCategory(with: router)
 
         // Clear nudges left pending from a previous launch, then schedule fresh
         // (inside the completion, so there's no add/remove race).
@@ -123,41 +121,15 @@ final class NudgeScheduler: NSObject {
         scheduledIDs.removeAll()
     }
 
-    private func requestAuthorization() {
-        center.requestAuthorization(options: [.alert, .sound]) { granted, error in
-            if let error { print("Notification auth error: \(error)") }
-            else if !granted { print("Notification permission denied — nudges won't show.") }
-        }
-    }
-
-    private func registerCategory() {
+    private func registerCategory(with router: NotificationRouter) {
         let start = UNNotificationAction(identifier: startActionID, title: "Start tracking", options: [.foreground])
         let snooze = UNNotificationAction(identifier: snoozeActionID, title: "Snooze 30 min", options: [])
         let category = UNNotificationCategory(identifier: categoryID,
                                               actions: [start, snooze],
                                               intentIdentifiers: [],
                                               options: [])
-        center.setNotificationCategories([category])
-    }
-}
-
-// MARK: - UNUserNotificationCenterDelegate
-
-extension NudgeScheduler: UNUserNotificationCenterDelegate {
-
-    /// Show the banner even when the app is "active" (it's an agent, so it
-    /// frequently is) — otherwise nudges would be silently swallowed.
-    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter,
-                                            willPresent notification: UNNotification,
-                                            withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
-        completionHandler([.banner, .sound])
-    }
-
-    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter,
-                                            didReceive response: UNNotificationResponse,
-                                            withCompletionHandler completionHandler: @escaping () -> Void) {
-        let action = response.actionIdentifier
-        Task { @MainActor in
+        router.register(category: category) { [weak self] action in
+            guard let self else { return }
             switch action {
             case self.snoozeActionID:
                 self.snooze()
@@ -166,7 +138,6 @@ extension NudgeScheduler: UNUserNotificationCenterDelegate {
             default:
                 break
             }
-            completionHandler()
         }
     }
 }

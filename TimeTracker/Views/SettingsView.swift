@@ -12,6 +12,7 @@ struct SettingsView: View {
         TabView {
             workHoursTab.tabItem { Label("Work Hours", systemImage: "calendar") }
             nudgeTab.tabItem { Label("Nudge", systemImage: "bell") }
+            sessionTab.tabItem { Label("Session", systemImage: "timer") }
             generalTab.tabItem { Label("General", systemImage: "gearshape") }
             aboutTab.tabItem { Label("About", systemImage: "info.circle") }
         }
@@ -59,6 +60,37 @@ struct SettingsView: View {
                     .onChange(of: settings.nudgeMessage) { save() }
             }
             .disabled(!settings.nudgeEnabled)
+        }
+        .formStyle(.grouped)
+    }
+
+    // MARK: - Session (running-timer safeguards)
+
+    private var sessionTab: some View {
+        @Bindable var settings = model.settings
+        return Form {
+            Section {
+                Toggle("Periodic check-in", isOn: $settings.checkInEnabled)
+                    .onChange(of: settings.checkInEnabled) { save() }
+                Stepper(value: $settings.checkInIntervalMinutes, in: 5...180, step: 5) {
+                    Text("Every \(settings.checkInIntervalMinutes) min")
+                }
+                .onChange(of: settings.checkInIntervalMinutes) { save() }
+                .disabled(!settings.checkInEnabled)
+                Text("Reminds you a session is still running, so a forgotten timer can't run all day.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Section {
+                Toggle("Detect when I step away", isOn: $settings.idleDetectionEnabled)
+                    .onChange(of: settings.idleDetectionEnabled) { save() }
+                Stepper(value: $settings.idleThresholdMinutes, in: 1...60, step: 1) {
+                    Text("Away after \(settings.idleThresholdMinutes) min without input")
+                }
+                .onChange(of: settings.idleThresholdMinutes) { save() }
+                .disabled(!settings.idleDetectionEnabled)
+                Text("When you return (or wake the Mac), choose to keep the time, subtract it, or end the session at the moment you left.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
         }
         .formStyle(.grouped)
     }
@@ -119,8 +151,9 @@ struct SettingsView: View {
 
     private func save() {
         do { try context.save() } catch { print("Settings save error: \(error)") }
-        // Work-hours and nudge settings affect when nudges fire — rebuild.
+        // Settings affect when nudges and check-ins fire — rebuild both.
         model.nudge.reschedule()
+        model.sessionMonitor.reschedule()
     }
 
     /// Make sure a row exists for all 7 weekdays so the UI can bind directly.

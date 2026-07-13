@@ -19,6 +19,8 @@
 		B50BD1D8D77BFC4B0286085E /* LoginItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8196A94A20307BFCFDEA52F /* LoginItem.swift */; };
 		B69C85394D0F58DBE3BABDD6 /* MenuBarContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32C36FF41A16F3ABF1D997E7 /* MenuBarContentView.swift */; };
 		CEAEE3EFBC5B82F946219774 /* NudgeScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C4F68E352A6E6CDCDA34E7A /* NudgeScheduler.swift */; };
+		2B3C4D5E6F708192A3B4C5D6 /* NotificationRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F708192A3B4C5 /* NotificationRouter.swift */; };
+		4D5E6F708192A3B4C5D6E7F8 /* SessionMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C4D5E6F708192A3B4C5D6E7 /* SessionMonitor.swift */; };
 		D73662FBB6D9C334B3273A2E /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5E6C3CF40AA1A1ED7E12EEF /* SettingsView.swift */; };
 		ED0CD3B09DB0CF5AB40932D3 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 943B4D377432DA396308BDAB /* Assets.xcassets */; };
 		F88C5FBBE3EEC24CFB1EF6EB /* StarRating.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3C2A4E8B4985D4EC1B5FE70 /* StarRating.swift */; };
@@ -28,6 +30,8 @@
 /* Begin PBXFileReference section */
 		079E4EE3710D229304251229 /* TimeEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeEntry.swift; sourceTree = "<group>"; };
 		1C4F68E352A6E6CDCDA34E7A /* NudgeScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NudgeScheduler.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F708192A3B4C5 /* NotificationRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationRouter.swift; sourceTree = "<group>"; };
+		3C4D5E6F708192A3B4C5D6E7 /* SessionMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionMonitor.swift; sourceTree = "<group>"; };
 		21D658074F07FC7A3FB2B83B /* WorkHours.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkHours.swift; sourceTree = "<group>"; };
 		2688D7280A1EC4CA87D15AC8 /* WrapUpForm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WrapUpForm.swift; sourceTree = "<group>"; };
 		32C36FF41A16F3ABF1D997E7 /* MenuBarContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarContentView.swift; sourceTree = "<group>"; };
@@ -90,7 +94,9 @@
 			children = (
 				7789D46B0CA7D6869F36075F /* AppModel.swift */,
 				B8196A94A20307BFCFDEA52F /* LoginItem.swift */,
+				1A2B3C4D5E6F708192A3B4C5 /* NotificationRouter.swift */,
 				1C4F68E352A6E6CDCDA34E7A /* NudgeScheduler.swift */,
+				3C4D5E6F708192A3B4C5D6E7 /* SessionMonitor.swift */,
 				71CD0429F6273AD0D74A1570 /* TrackingController.swift */,
 				21D658074F07FC7A3FB2B83B /* WorkHours.swift */,
 			);
@@ -193,7 +199,9 @@
 				2C33773E5351A9CE869ECF59 /* HistoryView.swift in Sources */,
 				B50BD1D8D77BFC4B0286085E /* LoginItem.swift in Sources */,
 				B69C85394D0F58DBE3BABDD6 /* MenuBarContentView.swift in Sources */,
+				2B3C4D5E6F708192A3B4C5D6 /* NotificationRouter.swift in Sources */,
 				CEAEE3EFBC5B82F946219774 /* NudgeScheduler.swift in Sources */,
+				4D5E6F708192A3B4C5D6E7F8 /* SessionMonitor.swift in Sources */,
 				D73662FBB6D9C334B3273A2E /* SettingsView.swift in Sources */,
 				F88C5FBBE3EEC24CFB1EF6EB /* StarRating.swift in Sources */,
 				FE6DB63EE18FEF2739EDF31F /* TimeEntry.swift in Sources */,

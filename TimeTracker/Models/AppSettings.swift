@@ -8,12 +8,27 @@ import SwiftData
 @Model
 final class AppSettings {
     /// Minutes between nudges while idle during work hours.
-    var nudgeIntervalMinutes: Int = 15
+    var nudgeIntervalMinutes: Int = 1
 
     /// The reminder text. Customizable by the user.
     var nudgeMessage: String = "You're in work hours and not tracking. What are you working on?"
 
     var nudgeEnabled: Bool = true
+
+    // MARK: Running-session monitoring (see `SessionMonitor`)
+
+    /// Periodic "still working on this?" reminder while a session is running.
+    var checkInEnabled: Bool = true
+
+    /// Minutes of *active* tracked time between check-in reminders.
+    var checkInIntervalMinutes: Int = 15
+
+    /// Detect that you walked away (no input / sleep / lock) while the timer ran,
+    /// and offer to repair the entry when you come back.
+    var idleDetectionEnabled: Bool = true
+
+    /// Minutes without input before you count as "away".
+    var idleThresholdMinutes: Int = 5
 
     /// Whether the app registers itself as a login item (see `LoginItem`).
     var launchAtLogin: Bool = false
