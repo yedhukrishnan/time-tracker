@@ -7,12 +7,13 @@ is a slash command away.
 
 ## The quick panel
 
-Press **⌘⇧↩** from any app (customizable in Settings) and the panel appears:
+Press **Cmd+Shift+Return** from any app (customizable in Settings) and the
+panel appears:
 
-- **Type what you're working on, press ⏎** — session started. Do the same
-  mid-session to switch tasks in one stroke.
-- **Type `/`** to see commands, filtered as you type. ↑/↓ to select, tab to
-  complete, ⏎ to run:
+- **Type what you're working on, press Return** — session started. Do the
+  same mid-session to switch tasks in one stroke.
+- **Type `/`** to see commands, filtered as you type. Up/Down to select, Tab
+  to complete, Return to run:
 
 | Command | Alias | What it does |
 |---|---|---|
@@ -52,8 +53,9 @@ subtract it, or end the session at the moment you left.
 ## Reflect when you stop
 
 Stopping a session flows straight into a two-step wrap-up, still all-keyboard:
-type a line about what you actually got done, ⏎, then rate it 1–5 with the
-number keys, ⏎ to save. Both steps are skippable (esc) — and everything is
+type a line about what you actually got done, press Return, then rate it 1–5
+with the number keys, Return to save. Both steps are skippable (Esc) — and
+everything is
 editable later from History, so a skipped rating is never lost data.
 
 ## History
@@ -103,7 +105,7 @@ cd time-tracker
 open TimeTracker.xcodeproj
 ```
 
-Then in Xcode: select the **TimeTracker** scheme and press ⌘R.
+Then in Xcode: select the **TimeTracker** scheme and press Cmd+R.
 
 ### Signing
 
