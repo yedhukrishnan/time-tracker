@@ -73,7 +73,7 @@ struct SettingsView: View {
             Section {
                 Toggle("Periodic check-in", isOn: $settings.checkInEnabled)
                     .onChange(of: settings.checkInEnabled) { save() }
-                Stepper(value: $settings.checkInIntervalMinutes, in: 5...180, step: 5) {
+                Stepper(value: $settings.checkInIntervalMinutes, in: 1...180, step: 1) {
                     Text("Every \(settings.checkInIntervalMinutes) min")
                 }
                 .onChange(of: settings.checkInIntervalMinutes) { save() }

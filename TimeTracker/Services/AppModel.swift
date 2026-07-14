@@ -127,7 +127,7 @@ final class AppModel {
         if minutes <= 0 {
             settings.checkInEnabled = false
         } else {
-            settings.checkInIntervalMinutes = max(5, min(180, minutes))
+            settings.checkInIntervalMinutes = max(1, min(180, minutes))
             settings.checkInEnabled = true
         }
         persist()
