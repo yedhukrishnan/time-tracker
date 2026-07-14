@@ -1,5 +1,31 @@
 import SwiftUI
 import SwiftData
+import AppKit
+
+/// Invisible view that hands the `openWindow` action to AppModel. The quick
+/// panel is hosted in an NSPanel outside any SwiftUI scene, so it cannot read
+/// `\.openWindow` from its own environment; the status-item label (always
+/// instantiated) captures the action once and stores it on the model.
+private struct OpenWindowBridge: View {
+    @Environment(\.openWindow) private var openWindow
+    @Environment(\.openSettings) private var openSettings
+    let model: AppModel
+
+    var body: some View {
+        Color.clear
+            .onAppear {
+                model.openHistory = {
+                    // Accessory app: activate first or the window opens behind.
+                    NSApp.activate(ignoringOtherApps: true)
+                    openWindow(id: "history")
+                }
+                model.openSettings = {
+                    NSApp.activate(ignoringOtherApps: true)
+                    openSettings()
+                }
+            }
+    }
+}
 
 @main
 struct TimeTrackerApp: App {
@@ -48,6 +74,9 @@ struct TimeTrackerApp: App {
                         .font(.system(size: 13, weight: .regular, design: .monospaced))
                 }
             }
+            // The label is the only SwiftUI view guaranteed to exist for the
+            // app's whole lifetime, so it hosts the openWindow bridge.
+            .background(OpenWindowBridge(model: model))
         }
         .menuBarExtraStyle(.window)
 

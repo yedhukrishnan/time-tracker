@@ -69,6 +69,14 @@ final class TrackingController {
         onChange()
     }
 
+    /// Rename the running session's agenda (quick panel `/edit`).
+    func rename(agenda: String) {
+        guard let entry = running else { return }
+        entry.agenda = agenda.trimmingCharacters(in: .whitespacesAndNewlines)
+        entry.touch()
+        save()
+    }
+
     /// End the running session and return it for wrap-up (achievement + rating).
     /// Pass `at:` to backdate the end (e.g. "end when I left" after being away);
     /// it is clamped to the session's span so duration can't go negative.

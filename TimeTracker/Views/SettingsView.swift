@@ -110,7 +110,7 @@ struct SettingsView: View {
             }
             Section {
                 KeyboardShortcuts.Recorder("Quick panel shortcut", name: .toggleQuickPanel)
-                Text("Opens the quick panel from any app — type an agenda to start, or pause/stop a running session.")
+                Text("Opens the quick panel from any app — type an agenda to start or switch task, or / for commands (stop, pause, edit, nudge/check intervals, history, settings).")
                     .font(.caption).foregroundStyle(.secondary)
             }
         }

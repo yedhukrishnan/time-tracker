@@ -18,6 +18,13 @@ final class AppModel {
     private let notificationRouter: NotificationRouter
     private(set) var settings: AppSettings
 
+    /// Open the History / Settings windows. The quick panel lives in an NSPanel
+    /// outside any SwiftUI scene, so it can't read `\.openWindow` /
+    /// `\.openSettings` itself — these closures are wired by `OpenWindowBridge`
+    /// (a view inside the MenuBarExtra scene).
+    var openHistory: () -> Void = {}
+    var openSettings: () -> Void = {}
+
     init(context: ModelContext) {
         self.context = context
         self.tracking = TrackingController(context: context)
@@ -64,7 +71,7 @@ final class AppModel {
         nudge.start(router: notificationRouter)
         sessionMonitor.start(router: notificationRouter)
 
-        // Global hotkey → Spotlight-style quick panel (start/pause/stop).
+        // Global hotkey → Spotlight-style quick panel (command palette).
         quickPanel.start(model: self)
 
         LoginItem.setEnabled(settings.launchAtLogin)
@@ -96,6 +103,26 @@ final class AppModel {
         settings.launchAtLogin = on
         LoginItem.setEnabled(on)
         persist()
+    }
+
+    // MARK: - Quick-panel commands (`/nudge N`, `/check N`)
+    //
+    // Clamped to the same ranges as the Settings steppers so the two surfaces
+    // can't disagree. Typing an interval is an unambiguous intent to *have*
+    // the feature, so a disabled toggle is switched back on.
+
+    func setNudgeInterval(minutes: Int) {
+        settings.nudgeIntervalMinutes = max(1, min(120, minutes))
+        settings.nudgeEnabled = true
+        persist()
+        nudge.reschedule()
+    }
+
+    func setCheckInInterval(minutes: Int) {
+        settings.checkInIntervalMinutes = max(5, min(180, minutes))
+        settings.checkInEnabled = true
+        persist()
+        sessionMonitor.reschedule()
     }
 
     // MARK: - Fetching

@@ -22,6 +22,12 @@ final class QuickPanelController: NSObject, NSWindowDelegate {
     private weak var model: AppModel?
     private var panel: NSPanel?
 
+    /// Fixed top edge (upper third of the screen, where Spotlight sits). The
+    /// content height changes *while the panel is open* — command suggestions
+    /// appear, /stop flows into wrap-up — so the panel is re-anchored to this
+    /// edge on every resize and grows downward, like Spotlight's result list.
+    private var topY: CGFloat?
+
     /// Call once from `AppModel.bootstrap`.
     func start(model: AppModel) {
         self.model = model
@@ -36,8 +42,9 @@ final class QuickPanelController: NSObject, NSWindowDelegate {
 
     func show() {
         guard let model else { return }
-        // Rebuild each time: the content's height differs between idle and
-        // running states, and rebuilding sizes the panel to the current state.
+        // Rebuild each time so the panel opens sized to the current state;
+        // subsequent in-place height changes are handled by the hosting view's
+        // `.preferredContentSize` sizing plus `windowDidResize` re-anchoring.
         hide()
         let panel = makePanel(model: model)
         self.panel = panel
@@ -57,12 +64,20 @@ final class QuickPanelController: NSObject, NSWindowDelegate {
         hide()
     }
 
+    /// SwiftUI resized the content (suggestions shown/hidden, mode change) —
+    /// keep the top edge pinned so growth goes downward.
+    func windowDidResize(_ notification: Notification) {
+        repositionKeepingTop()
+    }
+
     // MARK: - Construction
 
     private func makePanel(model: AppModel) -> NSPanel {
         let content = QuickPanelView(onDismiss: { [weak self] in self?.hide() })
             .environment(model)
         let hosting = NSHostingView(rootView: content)
+        // Let SwiftUI drive the window size as the content changes height.
+        hosting.sizingOptions = .preferredContentSize
 
         let panel = KeyablePanel(
             contentRect: .zero,
@@ -85,14 +100,18 @@ final class QuickPanelController: NSObject, NSWindowDelegate {
         return panel
     }
 
-    /// Center horizontally, upper third of the screen — where Spotlight sits.
+    /// Center horizontally, top edge in the upper third — where Spotlight sits.
     private func position(_ panel: NSPanel) {
         guard let screen = NSScreen.main else { return }
+        topY = screen.visibleFrame.minY + screen.visibleFrame.height * 0.72
+        repositionKeepingTop()
+    }
+
+    private func repositionKeepingTop() {
+        guard let panel, let topY, let screen = NSScreen.main else { return }
         let vf = screen.visibleFrame
         let size = panel.frame.size
-        let x = vf.midX - size.width / 2
-        let y = vf.minY + vf.height * 0.7 - size.height / 2
-        panel.setFrameOrigin(NSPoint(x: x, y: y))
+        panel.setFrameOrigin(NSPoint(x: vf.midX - size.width / 2, y: topY - size.height))
     }
 }
 
