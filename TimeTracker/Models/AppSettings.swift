@@ -8,7 +8,7 @@ import SwiftData
 @Model
 final class AppSettings {
     /// Minutes between nudges while idle during work hours.
-    var nudgeIntervalMinutes: Int = 1
+    var nudgeIntervalMinutes: Int = 15
 
     /// The reminder text. Customizable by the user.
     var nudgeMessage: String = "You're in work hours and not tracking. What are you working on?"
@@ -18,7 +18,8 @@ final class AppSettings {
     // MARK: Running-session monitoring (see `SessionMonitor`)
 
     /// Periodic "still working on this?" reminder while a session is running.
-    var checkInEnabled: Bool = true
+    /// Off by default — it's a taste thing; opt in via Settings or `/check N`.
+    var checkInEnabled: Bool = false
 
     /// Minutes of *active* tracked time between check-in reminders.
     var checkInIntervalMinutes: Int = 15
