@@ -107,20 +107,29 @@ final class AppModel {
 
     // MARK: - Quick-panel commands (`/nudge N`, `/check N`)
     //
-    // Clamped to the same ranges as the Settings steppers so the two surfaces
-    // can't disagree. Typing an interval is an unambiguous intent to *have*
-    // the feature, so a disabled toggle is switched back on.
+    // 0 (or negative) disables the feature; a positive value enables it and
+    // sets the interval, clamped to the same ranges as the Settings steppers
+    // so the two surfaces can't disagree. The interval itself is left alone
+    // when disabling, so re-enabling from Settings restores the old cadence.
 
     func setNudgeInterval(minutes: Int) {
-        settings.nudgeIntervalMinutes = max(1, min(120, minutes))
-        settings.nudgeEnabled = true
+        if minutes <= 0 {
+            settings.nudgeEnabled = false
+        } else {
+            settings.nudgeIntervalMinutes = max(1, min(120, minutes))
+            settings.nudgeEnabled = true
+        }
         persist()
         nudge.reschedule()
     }
 
     func setCheckInInterval(minutes: Int) {
-        settings.checkInIntervalMinutes = max(5, min(180, minutes))
-        settings.checkInEnabled = true
+        if minutes <= 0 {
+            settings.checkInEnabled = false
+        } else {
+            settings.checkInIntervalMinutes = max(5, min(180, minutes))
+            settings.checkInEnabled = true
+        }
         persist()
         sessionMonitor.reschedule()
     }

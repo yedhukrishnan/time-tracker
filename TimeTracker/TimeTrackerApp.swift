@@ -33,6 +33,21 @@ struct TimeTrackerApp: App {
     @State private var model: AppModel
 
     init() {
+        // Single-instance guard. Two instances (installed copy + DMG copy, or
+        // login item + Xcode debug build) would share one SQLite store, and
+        // Core Data dies unrecoverably when the store changes underneath it.
+        // Enforce "one process per store" before the ModelContainer opens it:
+        // if another instance of this bundle id is already running, yield to
+        // it and quit. `exit` (not NSApp.terminate) because NSApp isn't set
+        // up yet this early in init.
+        let bundleID = Bundle.main.bundleIdentifier ?? ""
+        let others = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
+            .filter { $0.processIdentifier != ProcessInfo.processInfo.processIdentifier }
+        if let existing = others.first {
+            existing.activate()
+            exit(0)
+        }
+
         let schema = Schema([TimeEntry.self, WorkSchedule.self, AppSettings.self])
         // `.automatic` enables CloudKit mirroring when entitlements are present,
         // and falls back to a local store otherwise (so it runs before you set

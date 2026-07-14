@@ -83,8 +83,8 @@ struct QuickPanelView: View {
             case .pause:   "Pause the session"
             case .resume:  "Resume the session"
             case .edit:    "Edit the session name"
-            case .nudge:   "Set idle-nudge interval"
-            case .check:   "Set check-in interval"
+            case .nudge:   "Set nudge interval (0 = off)"
+            case .check:   "Set check-in interval (0 = off)"
             case .history: "Open the History window"
             case .settings: "Open Settings"
             }
