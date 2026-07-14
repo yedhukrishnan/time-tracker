@@ -1,22 +1,94 @@
 # Time Tracker
 
-A native macOS menu bar app for tracking work sessions, with per-session agenda,
-post-session reflection (achievement + 1–5 star rating), work-hours nudges, and
-iCloud sync. See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the design rationale.
+A keyboard-first time tracker for macOS. It lives in your menu bar, and you
+drive it like Spotlight: one global hotkey, type what you're working on, hit
+return. Everything else — stopping, pausing, renaming, retuning reminders —
+is a slash command away.
 
-## What it does
+## The quick panel
 
-- Lives in the **menu bar** (no Dock icon). Click to start/stop a session.
-- **Agenda** captured at start; a **live timer** shows in the menu bar while running.
-- On **stop**, prompts for what you got done and a 1–5 star rating.
-- While you're **within work hours and not tracking**, it nudges you every N
-  minutes (default 15) with a customizable message — with "Start tracking" and
-  "Snooze 30 min" actions right on the notification.
-- **History** window: past sessions grouped by day; everything editable after the
-  fact; delete supported.
-- **iCloud sync** of all data via CloudKit (private database).
+Press **⌘⇧↩** from any app (customizable in Settings) and the panel appears:
 
-## Requirements
+- **Type what you're working on, press ⏎** — session started. Do the same
+  mid-session to switch tasks in one stroke.
+- **Type `/`** to see commands, filtered as you type. ↑/↓ to select, tab to
+  complete, ⏎ to run:
+
+| Command | Alias | What it does |
+|---|---|---|
+| `/start <agenda>` | `/s` | Start a session |
+| `/stop` | `/s` | Stop the session, then wrap up |
+| `/pause`, `/resume` | `/p`, `/r` | Pause / resume |
+| `/edit` | `/e` | Rename the current session |
+| `/nudge N` | `/n` | Remind me to track every N minutes (`0` = off) |
+| `/check N` | `/c` | Check in on a running session every N minutes (`0` = off) |
+| `/history` | | Open the History window |
+| `/settings` | | Open Settings |
+
+Esc always backs out one level: clear what you typed, then close the panel.
+
+## As gentle or as relentless as you want
+
+Two kinds of reminders, both tunable on the fly from the keyboard:
+
+- **Nudges** keep you tracking. During your work hours (set per weekday in
+  Settings), if no session is running, the app reminds you every N minutes
+  (default 15) with a message you can customize — and a "Start tracking"
+  button right on the notification. Deep-work day? `/n 60`. Don't want to be
+  bothered at all? `/n 0`.
+- **Check-ins** keep the timer honest. While a session runs, an optional
+  "still working on this?" ping every N minutes catches the timer you forgot
+  to stop. Off by default; `/c 15` turns it on. Triaging email and prone to
+  drifting? `/c 5`.
+
+The point of putting these behind two-keystroke commands: the right interval
+depends on the task, so you can retune it every time you switch, not once in
+a settings pane you'll never reopen.
+
+There's also **away detection** — if you walk off (or the Mac sleeps) with the
+timer running, the app notices when you return and offers to keep the time,
+subtract it, or end the session at the moment you left.
+
+## Reflect when you stop
+
+Stopping a session flows straight into a two-step wrap-up, still all-keyboard:
+type a line about what you actually got done, ⏎, then rate it 1–5 with the
+number keys, ⏎ to save. Both steps are skippable (esc) — and everything is
+editable later from History, so a skipped rating is never lost data.
+
+## History
+
+A full window (`/history`) with every session grouped by day: per-day totals,
+search, a minimum-rating filter, and after-the-fact editing of any field —
+agenda, summary, rating, even the start/end times.
+
+## The menu bar, for mouse moments
+
+The status item shows a live timer while tracking. Clicking it opens a
+popover with start/stop buttons, today's sessions and total — everything the
+panel does, for the moments your hand is already on the mouse.
+
+## Your data
+
+Stored locally in a SwiftData database, synced through your **private**
+CloudKit database when iCloud is available — your sessions and settings
+follow you across Macs, and nothing is ever sent anywhere else.
+
+## Install
+
+Requires macOS 14 (Sonoma) or newer. Grab the `.dmg` from
+[Releases](https://github.com/yedhukrishnan/mac-simple-time-tracker/releases),
+drag the app to Applications, and enable **Launch at login** in Settings so
+nudges are alive when your workday starts. Or build from source, below.
+
+---
+
+## Building from source
+
+Developer-facing from here down. See [`ARCHITECTURE.md`](ARCHITECTURE.md) for
+the design rationale.
+
+### Requirements
 
 - macOS 14 (Sonoma) or newer — driven by SwiftData.
 - Xcode 16+.
@@ -24,9 +96,7 @@ iCloud sync. See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the design rationale.
   iCloud + Push already enabled, so even a local debug build needs a Developer
   Program team to sign — see "Signing" below if you'd rather build without one.
 
-## Build & run
-
-Open the project and run it:
+### Build & run
 
 ```bash
 cd time-tracker
@@ -53,7 +123,7 @@ If you'd rather build without a paid account, strip the
 `TimeTracker.entitlements` — the app falls back to a local-only SwiftData store
 when the entitlement isn't present.
 
-## iCloud sync
+### iCloud sync
 
 Sync is wired in code (`ModelConfiguration(..., cloudKitDatabase: .automatic)` —
 which uses CloudKit when the entitlement is present and falls back to a local
@@ -86,7 +156,7 @@ CloudKit Dashboard.
 > `TimeTracker.entitlements` — a leftover reference file from when cloud
 > entitlements were opt-in. Worth deleting if it's no longer serving a purpose.
 
-## Forking / building your own copy
+### Forking / building your own copy
 
 This repo ships with the original author's Apple identifiers — bundle id
 `com.yedhu.TimeTracker` and CloudKit container `iCloud.com.yedhu.TimeTracker` —
@@ -96,9 +166,7 @@ single developer account, so Xcode will fail to provision them on your
 machine. They aren't secrets (the shipped app contains the bundle id in plain
 sight), and they expose no data — a CloudKit private database lives in each
 user's own iCloud account. They're simply identity you must replace with your
-own. And because the entitlements request iCloud + Push by default, you'll
-need a **paid Apple Developer account** to get even a first build signed (see
-"Signing" above).
+own.
 
 To build your own copy:
 
@@ -108,10 +176,9 @@ To build your own copy:
 2. **iCloud container** — update the `iCloud.<id>` string in
    `TimeTracker.entitlements` to match your new bundle id, and create that
    container in your account via the iCloud capability / CloudKit Dashboard
-   (see "iCloud sync" above). This isn't optional anymore — Xcode won't sign
-   the app with someone else's container id.
+   (see "iCloud sync" above).
 
-## Known limitations / next steps
+### Known limitations / next steps
 
 - **Background execution isn't guaranteed.** Nudges won't fire while the Mac is
   asleep; the engine re-evaluates on wake. For a long-idle agent, macOS may
@@ -121,7 +188,7 @@ To build your own copy:
 - **No edit audit log** — `modifiedAt` drives last-write-wins, which is enough
   for a personal tool.
 
-## Package a release (.dmg)
+### Package a release (.dmg)
 
 On macOS with Xcode installed, from the repo root:
 
@@ -140,7 +207,7 @@ xcrun notarytool submit dist/TimeTracker.dmg \
 xcrun stapler staple dist/TimeTracker.dmg
 ```
 
-## Project layout
+### Project layout
 
 ```
 TimeTracker/
@@ -148,9 +215,9 @@ TimeTracker/
 ├── Info.plist / *.entitlements
 ├── Models/                     # TimeEntry, WorkSchedule, AppSettings
 ├── Services/                   # WorkHours, TrackingController, NudgeScheduler,
-│                               #   LoginItem, AppModel (coordinator)
-└── Views/                      # MenuBar popover, WrapUpForm, History, Settings,
-                                #   Components/StarRating
+│                               #   SessionMonitor, QuickPanelController, AppModel
+└── Views/                      # QuickPanel, MenuBar popover, WrapUpForm,
+                                #   History, Settings, Components/StarRating
 ```
 
 ## License
