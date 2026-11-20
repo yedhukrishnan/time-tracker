@@ -41,6 +41,7 @@ final class AppModel {
         seedDefaultScheduleIfNeeded()
 
         notificationRouter.start()   // delegate + auth, before schedulers register
+        notificationRouter.isTrackingProvider = { [weak self] in self?.tracking.isTracking ?? false }
 
         nudge.isTrackingProvider = { [weak self] in self?.tracking.isTracking ?? false }
         nudge.settingsProvider = { [weak self] in self?.settings }
