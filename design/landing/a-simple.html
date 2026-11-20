@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Time Tracker — Version A: Simple</title>
+<style>
+  :root {
+    --ink: #1d1f2b; --muted: #5d6275; --line: #e6e7ee; --bg: #ffffff; --soft: #f6f6fb;
+    --accent: #6d74f0; --accent-soft: #eceefe;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 17px/1.6 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif; color: var(--ink); background: var(--bg); }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 24px; }
+  a { color: var(--accent); }
+  kbd { font: 600 0.85em/1 ui-monospace, "SF Mono", Menlo, monospace; background: var(--soft); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 6px; padding: 3px 7px; }
+
+  nav { display: flex; align-items: center; justify-content: space-between; padding: 20px 0; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; }
+  .brand svg { width: 28px; height: 28px; }
+  nav .links a { color: var(--muted); text-decoration: none; margin-left: 24px; font-size: 15px; }
+
+  .hero { text-align: center; padding: 64px 0 40px; }
+  .hero h1 { font-size: clamp(36px, 6vw, 58px); line-height: 1.1; letter-spacing: -0.02em; margin: 0 0 18px; }
+  .hero p.lede { font-size: 20px; color: var(--muted); max-width: 620px; margin: 0 auto 32px; }
+  .btn { display: inline-block; background: var(--accent); color: #fff; text-decoration: none; font-weight: 600; padding: 14px 26px; border-radius: 12px; }
+  .btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); margin-left: 10px; }
+  .fine { color: var(--muted); font-size: 14px; margin-top: 14px; }
+
+  /* Mock of the quick panel */
+  .stage { background: linear-gradient(160deg, #eef0ff, #f8f3ff); border-radius: 24px; padding: 48px 24px; margin: 40px 0 0; }
+  .shot { display: block; width: 100%; height: auto; border-radius: 16px; box-shadow: 0 24px 60px rgba(40,40,90,0.18); }
+  .stage .shot { max-width: 620px; margin: 0 auto; }
+  .caption { color: var(--muted); font-size: 15px; text-align: center; margin: 14px 0 0; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 28px; }
+  .wide { max-width: 860px; margin: 0 auto; }
+  .panel { max-width: 560px; margin: 0 auto; background: rgba(255,255,255,0.92); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 24px 60px rgba(40,40,90,0.15); overflow: hidden; text-align: left; }
+  .panel .input { display: flex; align-items: center; gap: 12px; padding: 16px 18px; font-size: 20px; }
+  .panel .input svg { width: 22px; height: 22px; flex: none; }
+  .caret { display: inline-block; width: 2px; height: 22px; background: var(--accent); vertical-align: -4px; animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .panel .hint { border-top: 1px solid var(--line); padding: 10px 18px; font-size: 13px; color: var(--muted); display: flex; justify-content: space-between; }
+
+  section { padding: 80px 0 0; }
+  h2 { font-size: 34px; letter-spacing: -0.01em; margin: 0 0 12px; text-align: center; }
+  .sub { text-align: center; color: var(--muted); margin: 0 auto 40px; max-width: 560px; }
+
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; counter-reset: s; }
+  .step { background: var(--soft); border-radius: 16px; padding: 24px; }
+  .step::before { counter-increment: s; content: counter(s); display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--accent); color: #fff; font-weight: 700; margin-bottom: 14px; }
+  .step h3 { margin: 0 0 6px; font-size: 19px; }
+  .step p { margin: 0; color: var(--muted); font-size: 16px; }
+
+  .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .feature { border: 1px solid var(--line); border-radius: 16px; padding: 24px; }
+  .feature .ico { font-size: 26px; }
+  .feature h3 { margin: 8px 0 6px; font-size: 18px; }
+  .feature p { margin: 0; color: var(--muted); font-size: 15.5px; }
+
+  .cta { text-align: center; background: var(--ink); color: #fff; border-radius: 24px; padding: 56px 24px; margin: 80px 0 0; }
+  .cta h2 { color: #fff; }
+  .cta p { color: #b9bccb; margin: 0 0 28px; }
+  footer { color: var(--muted); font-size: 14px; text-align: center; padding: 40px 0; }
+
+  @media (max-width: 760px) { .steps, .features, .pair { grid-template-columns: 1fr; } nav .links { display: none; } .btn.ghost { margin: 10px 0 0; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <div class="brand">
+      <svg viewBox="0 0 64 64" fill="none" stroke="#6d74f0" stroke-width="4" stroke-linecap="round"><circle cx="32" cy="32" r="24"/><circle cx="32" cy="32" r="8"/><path d="M32 12v6M32 46v6M12 32h6M46 32h6M32 20v24M20 32h24"/><circle cx="32" cy="32" r="2.5" fill="#6d74f0" stroke="none"/></svg>
+      Time Tracker
+    </div>
+    <div class="links"><a href="#how">How it works</a><a href="#features">Features</a><a href="https://github.com/yedhukrishnan/time-tracker">GitHub</a></div>
+  </nav>
+
+  <header class="hero">
+    <h1>Know where your day went.</h1>
+    <p class="lede">A tiny Mac app that lives in your menu bar. Press one shortcut, type what you're working on, and it keeps the time for you.</p>
+    <a class="btn" href="https://github.com/yedhukrishnan/time-tracker/releases/latest">Download for Mac</a>
+    <a class="btn ghost" href="#how">See how it works</a>
+    <div class="fine">Free and open source · macOS 14 Sonoma or newer</div>
+
+    <div class="stage">
+      <img class="shot" src="img/commands.png" alt="The Time Tracker quick panel showing a running session and the list of slash commands">
+      <p class="caption">The quick panel: press the shortcut, type a task or a command.</p>
+    </div>
+  </header>
+
+  <section id="how">
+    <h2>Three steps. No timesheets.</h2>
+    <p class="sub">Tracking only works if it takes seconds. So that's all it takes.</p>
+    <div class="steps">
+      <div class="step"><h3>Press the shortcut</h3><p><kbd>Cmd</kbd> <kbd>Shift</kbd> <kbd>Return</kbd> from any app opens a small search-style box.</p></div>
+      <div class="step"><h3>Type your task</h3><p>Write what you're about to do and press Return. The timer starts in your menu bar.</p></div>
+      <div class="step"><h3>Stop and reflect</h3><p>When you're done, note what you got done and rate it 1 to 5. Or skip it.</p></div>
+    </div>
+    <div class="pair">
+      <img class="shot" src="img/wrapup-summary.png" alt="Wrap-up step one: What did you get done?">
+      <img class="shot" src="img/wrapup-rating.png" alt="Wrap-up step two: rate the session from one to five stars">
+    </div>
+    <p class="caption">Stopping asks two quick questions. Press Esc to skip either one.</p>
+  </section>
+
+  <section id="features">
+    <h2>Everything you need, nothing you don't</h2>
+    <p class="sub">Built to stay out of your way until you need it.</p>
+    <div class="features">
+      <div class="feature"><div class="ico">⏰</div><h3>Gentle reminders</h3><p>Forgot to start the timer? During your work hours, it nudges you. Set how often, or turn it off.</p></div>
+      <div class="feature"><div class="ico">👋</div><h3>Notices when you're away</h3><p>Walked off with the timer running? When you're back, keep the time, remove it, or end the session when you left.</p></div>
+      <div class="feature"><div class="ico">💬</div><h3>Check-ins</h3><p>An optional "still on this?" ping while you work, so a forgotten timer doesn't run all afternoon.</p></div>
+      <div class="feature"><div class="ico">📖</div><h3>History you can fix</h3><p>Every session grouped by day with totals. Search, filter by rating, and edit anything later.</p></div>
+      <div class="feature"><div class="ico">⏸️</div><h3>Pause and switch</h3><p>Pause for lunch, rename a task, or jump straight to the next one without stopping first.</p></div>
+      <div class="feature"><div class="ico">🔒</div><h3>Private, synced by iCloud</h3><p>Your data stays in your own iCloud and follows you across your Macs. Nothing goes anywhere else.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>See every day at a glance</h2>
+    <p class="sub">Sessions grouped by day with totals and ratings. Search, filter, and fix anything later.</p>
+    <div class="wide"><img class="shot" src="img/history.png" alt="The History window listing sessions grouped by day, with durations and star ratings"></div>
+  </section>
+
+  <div class="cta">
+    <h2>Start tracking in under a minute</h2>
+    <p>Download, drag to Applications, press the shortcut.</p>
+    <a class="btn" href="https://github.com/yedhukrishnan/time-tracker/releases/latest">Download for Mac</a>
+  </div>
+
+  <footer>Time Tracker · MIT License · © 2026 Yedhu Krishnan</footer>
+</div>
+</body>
+</html>

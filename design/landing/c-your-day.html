@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Time Tracker — Version C: Your day</title>
+<style>
+  :root {
+    --bg: #fbf8f3; --card: #ffffff; --ink: #2b2620; --muted: #6f665b; --line: #ebe4d8;
+    --accent: #5b62e0; --warm: #f2a65a;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 18px/1.65 Charter, "Iowan Old Style", Georgia, serif; color: var(--ink); background: var(--bg); }
+  .sans { font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif; }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 0 24px; }
+  kbd { font: 600 0.8em/1 ui-monospace, Menlo, monospace; background: #f3eee5; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 6px; padding: 3px 7px; }
+
+  nav { display: flex; align-items: center; justify-content: space-between; padding: 24px 0; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; }
+  .brand svg { width: 26px; height: 26px; }
+  nav a.small { font-size: 15px; color: var(--muted); }
+
+  .hero { padding: 56px 0 24px; }
+  .eyebrow { font-size: 14px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--warm); font-weight: 700; }
+  .hero h1 { font-size: clamp(36px, 6vw, 56px); line-height: 1.12; margin: 10px 0 20px; font-weight: 700; }
+  .hero p { font-size: 21px; color: var(--muted); margin: 0 0 30px; max-width: 640px; }
+  .btn { display: inline-block; background: var(--accent); color: #fff; text-decoration: none; font-weight: 600; padding: 14px 26px; border-radius: 999px; font-size: 16px; }
+  .meta { color: var(--muted); font-size: 14px; margin-top: 14px; }
+
+  h2 { font-size: 32px; margin: 0 0 8px; }
+  .sub { color: var(--muted); margin: 0 0 36px; }
+  section { padding: 72px 0 0; }
+
+  /* The day timeline */
+  .timeline { position: relative; padding-left: 92px; }
+  .timeline::before { content: ""; position: absolute; left: 70px; top: 8px; bottom: 8px; width: 2px; background: var(--line); }
+  .moment { position: relative; margin-bottom: 26px; }
+  .moment .time { position: absolute; left: -92px; width: 60px; text-align: right; font-size: 15px; color: var(--muted); top: 18px; }
+  .moment::before { content: ""; position: absolute; left: -28px; top: 24px; width: 14px; height: 14px; border-radius: 50%; background: var(--card); border: 3px solid var(--accent); }
+  .moment.warm::before { border-color: var(--warm); }
+  .bubble { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 18px 22px; }
+  .bubble h3 { margin: 0 0 4px; font-size: 19px; }
+  .bubble p { margin: 0; color: var(--muted); font-size: 16.5px; }
+  .notif { margin-top: 12px; display: flex; gap: 12px; align-items: center; background: #f7f5ff; border-radius: 12px; padding: 10px 14px; font-size: 14px; }
+  .notif b { display: block; }
+  .notif .actions { margin-left: auto; display: flex; gap: 6px; }
+  .notif .actions span { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 4px 10px; white-space: nowrap; }
+  .shot { display: block; width: 100%; height: auto; border-radius: 12px; margin-top: 14px; }
+
+  .why { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .why div { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 22px; }
+  .why h3 { margin: 0 0 6px; font-size: 18px; }
+  .why p { margin: 0; color: var(--muted); font-size: 16px; }
+
+  .end { text-align: center; padding: 88px 0 24px; }
+  .end p { color: var(--muted); }
+  footer { text-align: center; color: var(--muted); font-size: 14px; padding: 32px 0 44px; }
+
+  @media (max-width: 700px) { .why { grid-template-columns: 1fr; } .timeline { padding-left: 28px; } .timeline::before { left: 6px; } .moment .time { position: static; display: block; margin-bottom: 4px; } .moment::before { left: -29px; top: 6px; } .notif { flex-wrap: wrap; } .notif .actions { margin-left: 0; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="sans">
+    <div class="brand">
+      <svg viewBox="0 0 64 64" fill="none" stroke="#5b62e0" stroke-width="4" stroke-linecap="round"><circle cx="32" cy="32" r="24"/><circle cx="32" cy="32" r="8"/><path d="M32 12v6M32 46v6M12 32h6M46 32h6M32 20v24M20 32h24"/><circle cx="32" cy="32" r="2.5" fill="#5b62e0" stroke="none"/></svg>
+      Time Tracker
+    </div>
+    <a class="small" href="https://github.com/yedhukrishnan/time-tracker">GitHub</a>
+  </nav>
+
+  <header class="hero">
+    <div class="eyebrow sans">A time tracker for Mac</div>
+    <h1>The easiest way to remember what you actually did today.</h1>
+    <p>Time Tracker sits quietly in your menu bar. Tell it what you're starting, and it keeps track — reminding you gently when you forget.</p>
+    <a class="btn sans" href="https://github.com/yedhukrishnan/time-tracker/releases/latest">Download for Mac — free</a>
+    <div class="meta sans">macOS 14 Sonoma or newer · Open source</div>
+  </header>
+
+  <section>
+    <h2>A day with Time Tracker</h2>
+    <p class="sub">Here's what using it actually looks like.</p>
+
+    <div class="timeline">
+      <div class="moment warm">
+        <div class="time sans">9:05</div>
+        <div class="bubble">
+          <h3>It reminds you to start</h3>
+          <p>Your workday has begun but nothing is being tracked, so you get a friendly nudge.</p>
+          <div class="notif sans"><div><b>Time Tracker</b>You're in work hours and not tracking. What are you working on?</div><div class="actions"><span>Start tracking</span><span>Snooze 30 min</span></div></div>
+        </div>
+      </div>
+
+      <div class="moment">
+        <div class="time sans">9:06</div>
+        <div class="bubble">
+          <h3>You start in two seconds</h3>
+          <p>Press <kbd>Cmd</kbd> <kbd>Shift</kbd> <kbd>Return</kbd> anywhere, type what you're doing, press Return. A timer appears in your menu bar. Type <kbd>/</kbd> any time for commands.</p>
+          <img class="shot" src="img/commands.png" alt="The quick panel with a running session and its commands">
+        </div>
+      </div>
+
+      <div class="moment">
+        <div class="time sans">12:30</div>
+        <div class="bubble">
+          <h3>You pause for lunch</h3>
+          <p>Pause and resume with a keystroke. Lunch doesn't count toward your work.</p>
+        </div>
+      </div>
+
+      <div class="moment warm">
+        <div class="time sans">15:10</div>
+        <div class="bubble">
+          <h3>It notices you stepped away</h3>
+          <p>You left for a 40-minute meeting with the timer still running. When you're back, it asks what to do with that time.</p>
+          <div class="notif sans"><div><b>You were away 40 min</b>What should happen to that time?</div><div class="actions"><span>Keep the time</span><span>Subtract away time</span><span>End session when I left</span></div></div>
+        </div>
+      </div>
+
+      <div class="moment">
+        <div class="time sans">17:30</div>
+        <div class="bubble">
+          <h3>You wrap up in one line</h3>
+          <p>Stop the timer, write what you got done, and rate how it went. Skip it if you're in a hurry — you can always add it later.</p>
+          <img class="shot" src="img/wrapup-summary.png" alt="Wrap-up: What did you get done?">
+          <img class="shot" src="img/wrapup-rating.png" alt="Wrap-up: rate the session from one to five stars">
+        </div>
+      </div>
+
+      <div class="moment">
+        <div class="time sans">Later</div>
+        <div class="bubble">
+          <h3>Your history is waiting</h3>
+          <p>Every session, grouped by day, with totals. Search it, filter by rating, and fix anything you got wrong.</p>
+          <img class="shot" src="img/history.png" alt="The History window with sessions grouped by day">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Why people stick with it</h2>
+    <p class="sub">Most time trackers get abandoned by Wednesday. This one is built to survive a real week.</p>
+    <div class="why">
+      <div><h3>It's fast</h3><p>Starting a timer takes one shortcut and a few words. No forms, no projects to set up.</p></div>
+      <div><h3>It's polite</h3><p>Reminders come one at a time, and you choose how often — or switch them off.</p></div>
+      <div><h3>It's yours</h3><p>Your data lives in your private iCloud and syncs across your Macs. Nothing is shared.</p></div>
+    </div>
+  </section>
+
+  <div class="end">
+    <h2>Give tomorrow a try.</h2>
+    <p>Install it tonight, turn on Launch at login, and let it nudge you in the morning.</p>
+    <a class="btn sans" href="https://github.com/yedhukrishnan/time-tracker/releases/latest">Download for Mac — free</a>
+  </div>
+
+  <footer class="sans">Time Tracker · MIT License · © 2026 Yedhu Krishnan</footer>
+</div>
+</body>
+</html>
