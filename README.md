@@ -8,7 +8,7 @@ is a slash command away.
 ## Install
 
 Requires macOS 14 (Sonoma) or newer. Grab the `.dmg` from
-[Releases](https://github.com/yedhukrishnan/mac-simple-time-tracker/releases),
+[Releases](https://github.com/yedhukrishnan/time-tracker/releases),
 drag the app to Applications, and enable **Launch at login** in Settings so
 nudges are alive when your workday starts. Or [build from
 source](BUILDING.md).
