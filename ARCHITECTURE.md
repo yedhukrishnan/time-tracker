@@ -3,7 +3,7 @@
 A native macOS time tracker built as a menu bar agent with a Spotlight-style
 command panel, iCloud sync, and a one-at-a-time notification engine.
 
-> **Status:** living document — describes the app **as built** (v0.1.3).
+> **Status:** living document — describes the app **as built** (v0.1.4).
 > Started life as the pre-implementation design doc; decisions that changed on
 > contact with reality are noted where they matter, and unbuilt ideas live in
 > [§10 Future work](#10-future-work).
