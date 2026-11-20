@@ -6,11 +6,13 @@ import UserNotifications
 /// Watches the *running* session — the mirror image of `NudgeScheduler`, which
 /// watches the idle state. Two jobs:
 ///
-/// 1. **Check-ins** — a periodic "still working on this?" notification while a
-///    session runs (customizable interval, off-switch in Settings). Like nudges,
-///    these are pre-scheduled as real notification requests so App Nap can't
-///    stall them. Fire times are anchored to the session's *active* elapsed
-///    time (start + pauses + k·interval), so rebuilds are stable.
+/// 1. **Check-ins** — a "still working on this?" notification while a session
+///    runs (customizable interval, off-switch in Settings). Like nudges, at most
+///    one is live at a time: it fires, and if you leave it unread we stay quiet;
+///    when you clear it (dismiss, tap, or an action) we arm the next one an
+///    interval later. The single pending request is real (survives App Nap), and
+///    the "one at a time" rule gates on a live delivered-notifications query, so
+///    a missed dismiss callback self-heals on the next heartbeat.
 ///
 /// 2. **Away detection** — the timer keeps running when you walk off, which is
 ///    the main way entries go bad. We watch for system sleep, screen lock, and
@@ -40,7 +42,6 @@ final class SessionMonitor {
     private let stopActionID = "CHECKIN_STOP"
     private let checkInIDPrefix = "checkin."
     private var scheduledIDs: [String] = []
-    private let maxScheduled = 16   // NudgeScheduler uses 32; stay under the OS's 64 cap combined
 
     // MARK: Away constants
     private let awayCategoryID = "AWAY"
@@ -73,10 +74,8 @@ final class SessionMonitor {
             }
         }
 
-        // Backstop: check-ins are pre-scheduled a finite distance out
-        // (maxScheduled × interval); extend coverage periodically so a long
-        // session never outruns them. Idempotent — the active-time grid keeps
-        // fire times stable across rebuilds.
+        // Backstop: re-arm the next check-in after a missed dismiss event.
+        // Cheap — reschedule() no-ops while a check-in is still unread.
         heartbeat = Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.reschedule() }
         }
@@ -122,25 +121,33 @@ final class SessionMonitor {
             awayStart = nil
         }
 
-        // Check-ins.
-        guard let settings, settings.checkInEnabled, let entry, activelyTracking else { return }
-        let interval = TimeInterval(max(1, settings.checkInIntervalMinutes) * 60)
-        let active = entry.duration    // active elapsed so far
+        // Check-ins: arm at most one, and only if none is already unread.
+        guard let settings, settings.checkInEnabled, activelyTracking else { return }
 
-        // Next check-ins land at k·interval of *active* time. Between now and
-        // the next pause/stop, active time advances with the wall clock, so
-        // fire(k) = now + (k·interval − active) — and any pause/resume/stop
-        // triggers a rebuild anyway.
-        var k = floor(active / interval) + 1
-        var count = 0
-        while count < maxScheduled {
-            let delay = k * interval - active
-            scheduleCheckIn(after: delay,
-                            activeAtFire: k * interval,
-                            agenda: entry.agenda)
-            k += 1
-            count += 1
+        // Gate on the live delivered set: don't stack a second check-in behind an
+        // unread one. This also self-heals a missed dismiss callback — once the
+        // banner is cleared, a later reschedule() finds none and arms the next.
+        center.getDeliveredNotifications { [weak self] delivered in
+            guard let self else { return }
+            let outstanding = delivered.contains { $0.request.content.categoryIdentifier == self.checkInCategoryID }
+            Task { @MainActor in
+                guard !outstanding else { return }
+                self.armCheckIn()
+            }
         }
+    }
+
+    /// Schedule one check-in `interval` from now. Re-reads state through the
+    /// providers — it runs after an async hop, so the session may have paused or
+    /// ended. Cancels first so two racing reschedules can't leave two pending.
+    private func armCheckIn() {
+        cancelPendingCheckIns()
+        guard let settings = settingsProvider(), settings.checkInEnabled,
+              let entry = runningProvider(), !isPausedProvider() else { return }
+        let interval = TimeInterval(max(1, settings.checkInIntervalMinutes) * 60)
+        scheduleCheckIn(after: interval,
+                        activeAtFire: entry.duration + interval,
+                        agenda: entry.agenda)
     }
 
     // MARK: - Check-in plumbing
@@ -241,10 +248,15 @@ final class SessionMonitor {
         let checkIn = UNNotificationCategory(identifier: checkInCategoryID,
                                              actions: [stop],
                                              intentIdentifiers: [],
-                                             options: [])
+                                             // Deliver explicit dismissals so we can arm the next check-in.
+                                             options: [.customDismissAction])
         router.register(category: checkIn) { [weak self] action in
-            guard let self, action == self.stopActionID else { return }
-            self.onStopRequested()
+            guard let self else { return }
+            // "Stop session" ends tracking (reschedule then no-ops). Any other
+            // response — dismiss, tap, etc. — clears the banner, so arm the next
+            // check-in an interval out.
+            if action == self.stopActionID { self.onStopRequested() }
+            self.reschedule()
         }
 
         let keep = UNNotificationAction(identifier: keepActionID, title: "Keep the time", options: [])
