@@ -1,7 +1,7 @@
 # Time Tracker — Architecture
 
 A native macOS time tracker built as a menu bar agent with a Spotlight-style
-command panel, iCloud sync, and a pre-scheduled notification engine.
+command panel, iCloud sync, and a one-at-a-time notification engine.
 
 > **Status:** living document — describes the app **as built** (v0.1.3).
 > Started life as the pre-implementation design doc; decisions that changed on
@@ -202,9 +202,9 @@ surely as an untracked hour.
 
 - **Check-ins** — optional "still working on this?" notification every N
   minutes of *active* tracked time (off by default; `/check N` from the
-  panel, `0` disables). Fire times anchor to the session's active-time grid
-  (k·interval of accumulated work), so rebuilds are stable. Carries a "Stop
-  session" action.
+  panel, `0` disables). Like nudges, at most one is live at a time: the next
+  is armed an interval out only after the previous banner is cleared (§7).
+  Carries a "Stop session" action.
 - **Away detection** — sleep, screen lock, and an input-idle poll (30 s,
   `CGEventSource.secondsSinceLastEventType`) mark when you left. On return
   past the threshold (default 5 min), a notification offers three repairs:
@@ -293,25 +293,41 @@ work hours. It would nag at 3 a.m. and mid-session.
 
 ### The approach that works
 
-**Pre-schedule** upcoming notifications as real one-shot requests, and
-cancel/rebuild the set whenever state changes. The OS delivers a pre-scheduled
+Schedule the next notification as a **real one-shot request**, and
+cancel/re-arm it whenever state changes. The OS delivers a scheduled
 notification even if the app is suspended by **App Nap**; an in-process timer
 would stall. (An earlier design fired nudges from a 30 s heartbeat — rejected
 for exactly that reason.)
 
-Rebuild triggers: session start/stop/pause/resume (via
+**At most one live notification per engine.** Each engine keeps either one
+pending request or one delivered-but-unread banner, never more. When it fires
+and you ignore it, the engine stays quiet; when you clear it (dismiss, tap, or
+an action), the next one is armed `interval` later. Ignored reminders don't
+stack up behind more reminders. (Through v0.1.3 both engines pre-scheduled a
+grid of future requests — up to 32 nudges and 16 check-ins — which is exactly
+what let unread banners pile up.)
+
+How a re-arm works (`NudgeScheduler.reschedule()` /
+`SessionMonitor.reschedule()`):
+
+1. Cancel the engine's own pending request.
+2. Bail if the feature is off or the state is wrong (nudges: tracking, incl.
+   paused, or no work hours; check-ins: not actively tracking).
+3. Query `getDeliveredNotifications`; if a banner of this engine's category
+   is still sitting in Notification Center, stop — don't arm another.
+4. Otherwise arm one request after the async hop (`armNext()` /
+   `armCheckIn()`), re-reading state and cancelling again first so two racing
+   reschedules can't leave two pending. Nudges fire at
+   `max(now + interval, snoozedUntil)` and only if that lands in work hours;
+   check-ins fire `interval` of active time from now.
+
+Re-arm triggers: session start/stop/pause/resume (via
 `TrackingController.onChange`), settings or work-hours edits, snooze, wake
-from sleep, plus a 5-minute heartbeat as a backstop to extend coverage.
-
-Idempotency is the load-bearing property, and it comes from **fixed grids**:
-
-- Nudges walk a clock grid (`startOfDay + k·interval`), scheduling up to 32
-  future points that are past `max(now, snoozedUntil)` and within work hours.
-  A 9:15 nudge stays at 9:15 no matter how often the backstop rebuilds.
-- Check-ins walk the session's *active-time* grid (`k·interval` of
-  accumulated work → `fire = now + (k·interval − active)`), up to 16. Any
-  pause/resume/stop rebuilds anyway, and 32 + 16 stays under the OS's
-  64-pending cap.
+from sleep, any response to the engine's notification — categories use
+`.customDismissAction` so an explicit dismiss is delivered too — plus a
+5-minute heartbeat. The rule gates on the *live* delivered set rather than on
+the dismiss callback, so a missed callback (e.g. a banner cleared in bulk)
+self-heals within a heartbeat instead of stalling the chain.
 
 Both engines track their scheduled ids and only ever cancel those, so they
 can't clobber each other — or anything else.
@@ -323,9 +339,18 @@ both clobber-on-write — so with two schedulers, neither may own them.
 `NotificationRouter` owns both: engines register a category plus an action
 handler, and the router aggregates categories and dispatches responses by
 `categoryIdentifier`. It also presents banners while the app is "active" (an
-agent usually is; without this, notifications are silently swallowed) and
-keeps at most one delivered notification per category, so ignored nudges
-replace each other instead of piling up in Notification Center.
+agent usually is; without this, notifications are silently swallowed).
+
+At delivery time (`willPresent`) the router applies two policies:
+
+- **Tracking guard.** A category registered with
+  `suppressWhileTracking: true` (nudges) is withheld if a session is running,
+  via an `isTrackingProvider` wired by `AppModel`. This is the only check
+  that runs at the moment of delivery, so it closes the race cancellation
+  can't — a nudge whose trigger elapses just as tracking begins.
+- **Sweep.** A banner that actually presents clears every *other* delivered
+  notification, across all categories, so stale banners don't linger. A
+  withheld banner doesn't sweep.
 
 ---
 
@@ -349,8 +374,8 @@ replace each other instead of piling up in Notification Center.
 
 ## 9. Risks & constraints
 
-- **Background execution isn't guaranteed.** Pre-scheduling (§7) survives App
-  Nap, but nothing fires while the Mac is fully asleep — both engines
+- **Background execution isn't guaranteed.** Real scheduled requests (§7)
+  survive App Nap, but nothing fires while the Mac is fully asleep — both engines
   re-evaluate on `NSWorkspace.didWakeNotification`.
 - **No server-side uniqueness** ⇒ the single-running-session rule can
   momentarily break across synced devices; resolved at launch recovery and by
