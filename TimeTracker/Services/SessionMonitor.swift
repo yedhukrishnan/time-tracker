@@ -305,7 +305,9 @@ final class SessionMonitor {
                                                   actions: [keep, subtract, stopAt],
                                                   intentIdentifiers: [],
                                                   options: [])
-        router.register(category: awayCategory) { [weak self] action in
+        // Exempt from the router's sweep: a check-in presenting while this is
+        // unanswered must not remove the user's only way to repair the entry.
+        router.register(category: awayCategory, exemptFromSweep: true) { [weak self] action in
             guard let self else { return }
             defer { self.pendingAway = nil }
             guard let window = self.pendingAway,

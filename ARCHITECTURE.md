@@ -350,7 +350,9 @@ At delivery time (`willPresent`) the router applies two policies:
   can't — a nudge whose trigger elapses just as tracking begins.
 - **Sweep.** A banner that actually presents clears every *other* delivered
   notification, across all categories, so stale banners don't linger. A
-  withheld banner doesn't sweep.
+  withheld banner doesn't sweep. Categories registered with
+  `exemptFromSweep: true` (the away prompt) are never swept — they await a
+  decision, and losing one loses the chance to repair the entry.
 
 ---
 

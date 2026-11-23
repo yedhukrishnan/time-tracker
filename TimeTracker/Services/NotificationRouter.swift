@@ -21,6 +21,9 @@ final class NotificationRouter: NSObject {
     /// the last line of defense against a reminder that slipped past
     /// cancellation (e.g. its trigger elapsed just as tracking began).
     private var suppressedWhileTracking: Set<String> = []
+    /// Category ids the delivery-time sweep must never clear — prompts still
+    /// awaiting a decision (the away repair), not mere reminders.
+    private var sweepExempt: Set<String> = []
 
     /// Whether a session is currently being tracked. Set by AppModel.
     var isTrackingProvider: () -> Bool = { false }
@@ -39,13 +42,17 @@ final class NotificationRouter: NSObject {
     ///
     /// Pass `suppressWhileTracking: true` for reminders that only make sense
     /// when idle (nudges); their banners are withheld while a session runs.
+    /// Pass `exemptFromSweep: true` for prompts that await a decision, so a
+    /// newer banner presenting doesn't silently remove them.
     func register(category: UNNotificationCategory,
                   suppressWhileTracking: Bool = false,
+                  exemptFromSweep: Bool = false,
                   handler: @escaping (String) -> Void) {
         categories.remove(category)   // replace if re-registered
         categories.insert(category)
         handlers[category.identifier] = handler
         if suppressWhileTracking { suppressedWhileTracking.insert(category.identifier) }
+        if exemptFromSweep { sweepExempt.insert(category.identifier) }
         center.setNotificationCategories(categories)
     }
 }
@@ -65,7 +72,9 @@ extension NotificationRouter: UNUserNotificationCenterDelegate {
     ///    scheduling/cancellation races can't.
     /// 2. **Sweep** — a freshly presented banner supersedes whatever was left
     ///    sitting in Notification Center: sweep every *other* delivered
-    ///    notification (all categories), so stale banners don't pile up.
+    ///    notification (all categories), so stale banners don't pile up —
+    ///    except sweep-exempt ones (the away prompt), which still await an
+    ///    answer and would otherwise lose the user their chance to fix the entry.
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter,
                                             willPresent notification: UNNotification,
                                             withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
@@ -80,9 +89,11 @@ extension NotificationRouter: UNUserNotificationCenterDelegate {
                 return
             }
             // 2. This banner is presenting — clear every other delivered one.
+            let exempt = self.sweepExempt
             center.getDeliveredNotifications { delivered in
                 let stale = delivered
                     .filter { $0.request.identifier != currentID }
+                    .filter { !exempt.contains($0.request.content.categoryIdentifier) }
                     .map(\.request.identifier)
                 if !stale.isEmpty { center.removeDeliveredNotifications(withIdentifiers: stale) }
             }
