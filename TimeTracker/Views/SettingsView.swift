@@ -58,7 +58,11 @@ struct SettingsView: View {
                 Text("Message")
                 TextField("Reminder text", text: $settings.nudgeMessage, axis: .vertical)
                     .lineLimit(2...4)
-                    .onChange(of: settings.nudgeMessage) { save() }
+                    // Persist only: the text doesn't affect timing, and a
+                    // reschedule per keystroke would push the pending nudge
+                    // back an interval each time. The new text applies from
+                    // the next nudge armed.
+                    .onChange(of: settings.nudgeMessage) { persist() }
             }
             .disabled(!settings.nudgeEnabled)
         }
@@ -157,8 +161,12 @@ struct SettingsView: View {
 
     // MARK: - Helpers
 
-    private func save() {
+    private func persist() {
         do { try context.save() } catch { print("Settings save error: \(error)") }
+    }
+
+    private func save() {
+        persist()
         // Settings affect when nudges and check-ins fire — rebuild both.
         model.nudge.reschedule()
         model.sessionMonitor.reschedule()
@@ -168,10 +176,15 @@ struct SettingsView: View {
     /// Days not seeded by default (Sat/Sun) are created disabled.
     private func ensureAllWeekdaysExist() {
         let present = Set(schedules.map(\.weekday))
-        for wd in 1...7 where !present.contains(wd) {
+        let missing = (1...7).filter { !present.contains($0) }
+        // Usually nothing is missing — don't save/reschedule just for opening
+        // Settings, which would push pending nudges and check-ins back. New
+        // rows are disabled, so they can't change when anything fires.
+        guard !missing.isEmpty else { return }
+        for wd in missing {
             context.insert(WorkSchedule(weekday: wd, isEnabled: false))
         }
-        save()
+        persist()
     }
 }
 
