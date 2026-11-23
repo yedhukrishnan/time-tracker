@@ -37,6 +37,9 @@ struct QuickPanelView: View {
     @State private var mode: Mode = .command
     @State private var text = ""
     @State private var selection = 0          // index into `suggestions`
+    /// True once ↑/↓ moved the highlight for the current text — an explicit
+    /// pick, so ⏎ may run it even when no command name has been typed.
+    @State private var navigated = false
     @State private var errorText: String?
     @State private var stopped: TimeEntry?    // entry being wrapped up
     @State private var pendingRating: Int?    // previewed in the rating step; saved on ⏎
@@ -171,6 +174,7 @@ struct QuickPanelView: View {
         }
         .onChange(of: text) {
             selection = 0
+            navigated = false
             errorText = nil
         }
     }
@@ -264,7 +268,11 @@ struct QuickPanelView: View {
 
         // Exact name/alias match wins; otherwise fall back to the highlighted
         // suggestion, so "/nu 5" ⏎ runs /nudge 5 without spelling it out.
+        // A bare "/" names nothing: ⏎ runs the highlight only if the user
+        // picked it with ↑/↓ — otherwise "/" ⏎ would run the first suggestion,
+        // which is /stop while tracking.
         let head = commandHead
+        if head.isEmpty && !navigated { return }
         let exact = availableCommands.first { $0.rawValue == head || $0.alias == head }
         guard let command = exact ?? selectedSuggestion else {
             errorText = "Unknown command: /\(head)"
@@ -461,6 +469,7 @@ struct QuickPanelView: View {
     private func moveSelection(_ delta: Int) {
         guard !suggestions.isEmpty else { return }
         selection = (clampedSelection + delta + suggestions.count) % suggestions.count
+        navigated = true
     }
 
     /// Esc backs out one level rather than always closing (Spotlight behavior).
