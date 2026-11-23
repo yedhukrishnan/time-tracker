@@ -111,6 +111,47 @@ On macOS with Xcode installed, from the repo root:
 ./scripts/build-dmg.sh           # → dist/TimeTracker.dmg
 ```
 
+### Releasing an update
+
+The app updates itself with [Sparkle](https://sparkle-project.org) from the
+`appcast.xml` attached to the **latest** GitHub release. For each release:
+
+1. Bump `MARKETING_VERSION` and **always increase** `CURRENT_PROJECT_VERSION`
+   (Sparkle compares the build number).
+2. Write the release notes as Markdown, then build, notarize and generate the
+   appcast in one go (needs `pandoc` for the notes):
+
+   ```bash
+   NOTARY_PROFILE=timetracker RELEASE_NOTES=notes.md ./scripts/build-dmg.sh
+   # → dist/TimeTracker.dmg + dist/appcast.xml
+   ```
+
+3. Create the GitHub release `v<version>` and attach **both** files:
+
+   ```bash
+   gh release create v0.1.6 dist/TimeTracker.dmg dist/appcast.xml \
+     --title "Time Tracker 0.1.6" --notes-file notes.md
+   ```
+
+   The appcast's download link points at
+   `releases/download/v<version>/TimeTracker.dmg`, so the tag must match the
+   app's version.
+
+**The update signing key.** Updates are signed with an EdDSA key whose
+private half lives in the login Keychain of the Mac that builds releases
+(created once with Sparkle's `generate_keys`; the public half is
+`SUPublicEDKey` in `Info.plist`). **Back it up** — if it's lost, installed
+copies can no longer accept updates:
+
+```bash
+.build/SourcePackages/artifacts/sparkle/Sparkle/bin/generate_keys -x sparkle-private-key
+# store that file in a password manager, then delete it
+# restore on another Mac with: generate_keys -f sparkle-private-key
+```
+
+Forks must generate their own key and replace `SUPublicEDKey` and
+`SUFeedURL` in `Info.plist`.
+
 This builds the Release configuration and packages the app into a drag-to-install
 disk image. The default build runs on **your** Mac but Gatekeeper will block it on
 others. To distribute, sign and notarize with a paid Apple Developer account:

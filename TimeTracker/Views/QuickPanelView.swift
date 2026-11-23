@@ -15,7 +15,7 @@ import SwiftUI
 ///   (the old session is stopped without wrap-up; annotate it later in History).
 /// - `/` enters command mode: a filtered suggestion list appears (↑/↓ select,
 ///   tab completes, ⏎ runs). Commands: /start /stop /pause /resume /edit
-///   /nudge N /check N /history /settings, with single-letter aliases.
+///   /nudge N /check N /history /settings /update, with single-letter aliases.
 /// - `/stop` flows into an inline wrap-up: summary ⏎ → rating (keys 1–5).
 ///   Both steps are skippable (esc) — a forced modal breeds resentment; the
 ///   entry stays editable in History.
@@ -48,7 +48,7 @@ struct QuickPanelView: View {
     // MARK: - Commands
 
     private enum Command: String, CaseIterable, Identifiable {
-        case start, stop, pause, resume, edit, nudge, check, history, settings
+        case start, stop, pause, resume, edit, nudge, check, history, settings, update
 
         var id: String { rawValue }
 
@@ -68,6 +68,7 @@ struct QuickPanelView: View {
             // path, and prefix matching ("/h", "/se") reaches them anyway.
             case .history: nil
             case .settings: nil
+            case .update:  nil
             }
         }
 
@@ -90,6 +91,7 @@ struct QuickPanelView: View {
             case .check:   "Set check-in interval (0 = off)"
             case .history: "Open the History window"
             case .settings: "Open Settings"
+            case .update:  "Check for updates"
             }
         }
     }
@@ -99,9 +101,9 @@ struct QuickPanelView: View {
     private var availableCommands: [Command] {
         if model.tracking.isTracking {
             let pauseOrResume: Command = model.tracking.isPaused ? .resume : .pause
-            return [.stop, pauseOrResume, .edit, .nudge, .check, .history, .settings]
+            return [.stop, pauseOrResume, .edit, .nudge, .check, .history, .settings, .update]
         } else {
-            return [.start, .nudge, .check, .history, .settings]
+            return [.start, .nudge, .check, .history, .settings, .update]
         }
     }
 
@@ -324,6 +326,10 @@ struct QuickPanelView: View {
         case .settings:
             model.openSettings()
             dismissClean()
+
+        case .update:
+            dismissClean()
+            model.updater.checkForUpdates()
         }
     }
 

@@ -100,6 +100,7 @@ Two mechanisms worth knowing because they're non-obvious:
 | Sync | **CloudKit** (private DB) | `ModelConfiguration(cloudKitDatabase: .automatic)`. |
 | Notifications | `UserNotifications` | §7. |
 | Launch at login | `SMAppService.mainApp` | Wrapped in `LoginItem`. |
+| Updates | [Sparkle 2](https://sparkle-project.org) | Wrapped in `Updater`; §5g. |
 | Min OS | macOS 14 (Sonoma) | Driven by SwiftData. |
 
 ---
@@ -245,6 +246,34 @@ Rendering is `LazyVStack` with pinned day headers over an unbounded `@Query`;
 fine at personal scale, and the known scaling fix (date-range scoping) is
 future work (§10).
 
+### 5g. Updates (`Updater`, Sparkle)
+
+In-app updates via **Sparkle 2**, chosen over a homemade check because the
+sandbox can't replace the app in /Applications itself — Sparkle's
+out-of-process installer (XPC launcher service, enabled by a mach-lookup
+entitlement exception) can — and because it verifies every download against
+an EdDSA key we hold, on top of the Apple signature.
+
+- **Feed:** `appcast.xml` attached to each GitHub release, read from
+  `…/releases/latest/download/appcast.xml`, so there's nothing extra to host.
+  It carries a single item (the latest version); Sparkle compares
+  `CFBundleVersion`, so build numbers must always increase.
+- **Always asks.** Checks run daily (`SUScheduledCheckInterval`); downloading
+  and installing never happen without the user choosing Install
+  (`SUAutomaticallyUpdate` and `SUAllowsAutomaticUpdates` are off, which
+  also hides Sparkle's "install automatically" checkbox).
+- **Gentle reminders.** A menu bar agent is rarely frontmost, so when a
+  *scheduled* check finds an update and the app isn't in focus, Sparkle's
+  window is held back: we post one notification (category `UPDATE`,
+  sweep-exempt) and show an "Update available" row in the popover. Either
+  opens the update window via `checkForUpdates()`, which resumes the found
+  update. User-initiated checks (Settings button, `/update`) show the window
+  directly. The reminder and row clear when the update session ends —
+  installed, skipped, or "Remind Me Later" (the next daily check re-finds it).
+- **Release side:** `scripts/build-dmg.sh` signs the stapled DMG with
+  Sparkle's `sign_update` and writes `dist/appcast.xml`, rendering the
+  release notes (Markdown → HTML via pandoc) into the item's description.
+
 ---
 
 ## 6. Project structure
@@ -254,8 +283,9 @@ TimeTracker/
 ├── TimeTrackerApp.swift          // @main: single-instance guard, MenuBarExtra,
 │                                 //   History window + Settings scenes,
 │                                 //   ModelContainer, OpenWindowBridge
-├── Info.plist                    // LSUIElement = YES
-├── TimeTracker.entitlements      // App Sandbox, iCloud/CloudKit, push
+├── Info.plist                    // LSUIElement = YES, Sparkle feed + key
+├── TimeTracker.entitlements      // App Sandbox, iCloud/CloudKit, push,
+│                                 //   Sparkle XPC mach-lookup exception
 ├── Models/
 │   ├── TimeEntry.swift
 │   ├── WorkSchedule.swift
@@ -269,6 +299,7 @@ TimeTracker/
 │   ├── SessionMonitor.swift      // running-state engine: check-ins + away (§5d)
 │   ├── NotificationRouter.swift  // single UNUserNotificationCenter owner (§7)
 │   ├── QuickPanelController.swift// hotkey, NSPanel lifecycle, sizing/anchoring
+│   ├── Updater.swift             // Sparkle wrapper, gentle reminders (§5g)
 │   ├── WorkHours.swift           // pure "within work hours?" predicate
 │   └── LoginItem.swift           // SMAppService wrapper
 └── Views/

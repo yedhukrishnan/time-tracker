@@ -22,6 +22,9 @@ struct MenuBarContentView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
+            if wrapUpEntry == nil, let version = model.updater.availableVersion {
+                updateRow(version)
+            }
             if let entry = wrapUpEntry {
                 WrapUpForm(entry: entry) { wrapUpEntry = nil }
             } else if let running = model.tracking.running {
@@ -42,6 +45,23 @@ struct MenuBarContentView: View {
         // openWindow) work on the first click. An LSUIElement app isn't active on
         // its own, and SettingsLink silently no-ops until the app is active.
         .onAppear { NSApp.activate(ignoringOtherApps: true) }
+    }
+
+    // MARK: - Update available
+
+    /// Shown while a scheduled check has found an update the user hasn't
+    /// dealt with yet. Opens Sparkle's update window — nothing installs
+    /// without the user choosing Install there.
+    private func updateRow(_ version: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "arrow.down.circle.fill").foregroundStyle(.blue)
+            Text("Version \(version) is available").font(.callout)
+            Spacer()
+            Button("Update…") { model.updater.checkForUpdates() }
+                .controlSize(.small)
+        }
+        .padding(8)
+        .background(RoundedRectangle(cornerRadius: 8).fill(Color.blue.opacity(0.08)))
     }
 
     // MARK: - Idle

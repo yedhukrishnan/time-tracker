@@ -15,6 +15,7 @@ final class AppModel {
     let nudge: NudgeScheduler
     let sessionMonitor: SessionMonitor
     let quickPanel: QuickPanelController
+    let updater: Updater
     private let notificationRouter: NotificationRouter
     private(set) var settings: AppSettings
 
@@ -31,6 +32,7 @@ final class AppModel {
         self.nudge = NudgeScheduler()
         self.sessionMonitor = SessionMonitor()
         self.quickPanel = QuickPanelController()
+        self.updater = Updater()
         self.notificationRouter = NotificationRouter()
         self.settings = AppModel.fetchOrCreateSettings(context)
     }
@@ -71,6 +73,7 @@ final class AppModel {
         }
         nudge.start(router: notificationRouter)
         sessionMonitor.start(router: notificationRouter)
+        updater.start(router: notificationRouter)   // daily update check (Sparkle)
 
         // Global hotkey → Spotlight-style quick panel (command palette).
         quickPanel.start(model: self)

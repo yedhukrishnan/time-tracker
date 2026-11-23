@@ -113,8 +113,20 @@ struct SettingsView: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section {
+                @Bindable var updater = model.updater
+                Toggle("Automatically check for updates", isOn: $updater.automaticallyChecks)
+                HStack {
+                    Button("Check for Updates…") { model.updater.checkForUpdates() }
+                        .disabled(!model.updater.canCheckForUpdates)
+                    Spacer()
+                    Text("Version \(appVersion)").font(.caption).foregroundStyle(.secondary)
+                }
+                Text("Checks once a day. Updates are never installed without asking.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Section {
                 KeyboardShortcuts.Recorder("Quick panel shortcut", name: .toggleQuickPanel)
-                Text("Opens the quick panel from any app — type an agenda to start or switch task, or / for commands (stop, pause, edit, nudge/check intervals, history, settings).")
+                Text("Opens the quick panel from any app — type an agenda to start or switch task, or / for commands (stop, pause, edit, nudge/check intervals, history, settings, update).")
                     .font(.caption).foregroundStyle(.secondary)
             }
         }

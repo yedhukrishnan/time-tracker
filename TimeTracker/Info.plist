@@ -28,6 +28,28 @@
 	<key>LSUIElement</key>
 	<true/>
 
+	<!-- Updates (Sparkle). The feed is the appcast.xml attached to the latest
+	     GitHub release; updates are verified against SUPublicEDKey (private
+	     half lives in the release Mac's Keychain — see BUILDING.md).
+	     Checks are daily; downloading/installing always asks first
+	     (SUAutomaticallyUpdate is off). -->
+	<key>SUFeedURL</key>
+	<string>https://github.com/yedhukrishnan/time-tracker/releases/latest/download/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>VtH+9Dn7dgJK/0KgOUTNfuNM2o+eJkir113x9734+ME=</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUScheduledCheckInterval</key>
+	<integer>86400</integer>
+	<key>SUAutomaticallyUpdate</key>
+	<false/>
+	<key>SUAllowsAutomaticUpdates</key>
+	<false/>
+	<!-- Sandboxed app: the installer runs out-of-process via Sparkle's XPC
+	     launcher service (needs the mach-lookup entitlement exception). -->
+	<key>SUEnableInstallerLauncherService</key>
+	<true/>
+
 	<!-- Note: CloudKit push on macOS comes from the Push Notifications capability
 	     (aps-environment), not a background mode. The iOS "remote-notification"
 	     UIBackgroundModes key does not apply to macOS. -->

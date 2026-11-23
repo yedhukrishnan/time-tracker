@@ -7,6 +7,7 @@
 #     ./scripts/build-dmg.sh
 #
 # Output: dist/TimeTracker.dmg  (signed; notarized + stapled if NOTARY_PROFILE set)
+#         dist/appcast.xml      (Sparkle update feed; only for notarized builds)
 #
 # Prerequisites:
 #   - A "Developer ID Application" certificate in your keychain
@@ -26,7 +27,15 @@
 #   SCHEME          Xcode scheme                     (default: TimeTracker)
 #   VOL_NAME        Volume + .app display name       (default: "Time Tracker")
 #   NOTARY_PROFILE  notarytool keychain profile name; if set, the DMG is
-#                   notarized and stapled automatically.
+#                   notarized and stapled automatically, and dist/appcast.xml
+#                   is generated for in-app updates.
+#   RELEASE_NOTES   Markdown file shown in the in-app update window (the same
+#                   text as the GitHub release notes). Optional.
+#   REPO            GitHub owner/repo hosting releases (default:
+#                   yedhukrishnan/time-tracker).
+#
+# The appcast is signed with the Sparkle EdDSA key in the login Keychain
+# (created once with generate_keys — see BUILDING.md).
 #
 set -euo pipefail
 
@@ -34,6 +43,7 @@ SCHEME="${SCHEME:-TimeTracker}"
 VOL_NAME="${VOL_NAME:-Time Tracker}"
 TEAM_ID="${TEAM_ID:-T7U7ZSM986}"
 PROJECT="TimeTracker.xcodeproj"
+REPO="${REPO:-yedhukrishnan/time-tracker}"
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
@@ -43,6 +53,11 @@ ARCHIVE="$BUILD_DIR/TimeTracker.xcarchive"
 EXPORT_DIR="$BUILD_DIR/export"
 DIST_DIR="$ROOT/dist"
 DMG_PATH="$DIST_DIR/TimeTracker.dmg"
+APPCAST_PATH="$DIST_DIR/appcast.xml"
+# Packages resolve here (not in DerivedData) so Sparkle's bin/ tools have a
+# stable path. Outside build/, which is wiped each run.
+PACKAGES_DIR="$ROOT/.build/SourcePackages"
+SPARKLE_BIN="$PACKAGES_DIR/artifacts/sparkle/Sparkle/bin"
 
 command -v xcodebuild >/dev/null || { echo "error: xcodebuild not found (install Xcode)."; exit 1; }
 [ -d "$PROJECT" ] || { echo "error: $PROJECT not found. Run from the repo root."; exit 1; }
@@ -55,6 +70,7 @@ xcodebuild \
   -scheme "$SCHEME" \
   -configuration Release \
   -archivePath "$ARCHIVE" \
+  -clonedSourcePackagesDirPath "$PACKAGES_DIR" \
   -allowProvisioningUpdates \
   archive
 
@@ -95,7 +111,7 @@ cp -R "$APP_PATH" "$STAGING/$VOL_NAME.app"
 ln -s /Applications "$STAGING/Applications"
 
 mkdir -p "$DIST_DIR"
-rm -f "$DMG_PATH"
+rm -f "$DMG_PATH" "$APPCAST_PATH"
 echo "==> Creating $DMG_PATH..."
 hdiutil create -volname "$VOL_NAME" -srcfolder "$STAGING" -ov -format UDZO "$DMG_PATH" >/dev/null
 
@@ -107,9 +123,45 @@ if [ -n "${NOTARY_PROFILE:-}" ]; then
   xcrun stapler staple "$DMG_PATH"
   echo "==> Verifying Gatekeeper acceptance..."
   spctl -a -vvv -t install "$DMG_PATH" || true
+
+  # --- 5. Sparkle appcast (in-app updates) ---------------------------------
+  # Sign the *stapled* DMG (stapling changes its bytes) and write the feed the
+  # app reads from the latest GitHub release.
+  echo "==> Generating appcast..."
+  [ -x "$SPARKLE_BIN/sign_update" ] || { echo "error: Sparkle tools not found at $SPARKLE_BIN"; exit 1; }
+  INFO="$APP_PATH/Contents/Info.plist"
+  VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$INFO")"
+  BUILD="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$INFO")"
+  MIN_OS="$(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$INFO")"
+  SIGNATURE="$("$SPARKLE_BIN/sign_update" "$DMG_PATH")"   # sparkle:edSignature="…" length="…"
+  NOTES_HTML="<p>Time Tracker $VERSION</p>"
+  if [ -n "${RELEASE_NOTES:-}" ]; then
+    command -v pandoc >/dev/null || { echo "error: pandoc is needed to render RELEASE_NOTES (brew install pandoc)"; exit 1; }
+    NOTES_HTML="$(pandoc -f gfm -t html "$RELEASE_NOTES")"
+  fi
+  cat > "$APPCAST_PATH" <<XML
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+  <channel>
+    <title>Time Tracker</title>
+    <item>
+      <title>Version $VERSION</title>
+      <pubDate>$(LC_ALL=C date -u "+%a, %d %b %Y %H:%M:%S +0000")</pubDate>
+      <sparkle:version>$BUILD</sparkle:version>
+      <sparkle:shortVersionString>$VERSION</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>$MIN_OS</sparkle:minimumSystemVersion>
+      <description><![CDATA[$NOTES_HTML]]></description>
+      <enclosure url="https://github.com/$REPO/releases/download/v$VERSION/TimeTracker.dmg"
+                 type="application/octet-stream" $SIGNATURE />
+    </item>
+  </channel>
+</rss>
+XML
+  xmllint --noout "$APPCAST_PATH"
   echo
   echo "Done (signed + notarized + stapled): $DMG_PATH"
   echo "This DMG opens cleanly on other Macs."
+  echo "Appcast: $APPCAST_PATH — attach it AND the DMG to the v$VERSION release."
 else
   echo
   echo "Done (signed, NOT notarized): $DMG_PATH"

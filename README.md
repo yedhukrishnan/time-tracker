@@ -13,6 +13,10 @@ drag the app to Applications, and enable **Launch at login** in Settings so
 nudges are alive when your workday starts. Or [build from
 source](BUILDING.md).
 
+Updates arrive in the app: it checks once a day, tells you when a new
+version is out, and installs it only when you say so (Settings → General
+also has **Check for Updates…**, or type `/update` in the quick panel).
+
 ## The quick panel
 
 Press **Cmd+Shift+Return** from any app (customizable in Settings) and the
