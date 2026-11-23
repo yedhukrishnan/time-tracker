@@ -129,8 +129,12 @@ final class SessionMonitor {
             awayStart = nil
         }
 
+        // No session ⇒ any "Timer still running" banner left in Notification
+        // Center is now false. Clear it so it doesn't linger.
+        if entry == nil { removeDeliveredCheckIns() }
+
         // Check-ins: arm at most one, and only if none is already unread.
-        guard let settings, settings.checkInEnabled, activelyTracking else {
+        guard let settings, settings.checkInEnabled, let entry, activelyTracking else {
             cancelPendingCheckIns()
             return
         }
@@ -139,11 +143,19 @@ final class SessionMonitor {
         // check-in (backstop mode) or stack one behind an unread banner. This
         // also self-heals a missed dismiss callback — once the banner is
         // cleared, a later reschedule() finds none and arms the next.
+        //
+        // Only a check-in delivered during *this* session counts as unread. A
+        // leftover from an earlier session (stopped while its banner sat in
+        // Notification Center) must not block this one's check-ins — and
+        // doesn't depend on the async removal above having landed yet.
+        let sessionStart = entry.startedAt
         center.getPendingNotificationRequests { [weak self] pending in
             guard let self else { return }
             let hasPending = keepPending && pending.contains { $0.content.categoryIdentifier == self.checkInCategoryID }
             self.center.getDeliveredNotifications { delivered in
-                let outstanding = delivered.contains { $0.request.content.categoryIdentifier == self.checkInCategoryID }
+                let outstanding = delivered.contains {
+                    $0.request.content.categoryIdentifier == self.checkInCategoryID && $0.date >= sessionStart
+                }
                 Task { @MainActor in
                     guard !hasPending, !outstanding else { return }
                     self.armCheckIn()
@@ -180,6 +192,18 @@ final class SessionMonitor {
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: delay, repeats: false)
         center.add(UNNotificationRequest(identifier: id, content: content, trigger: trigger))
         scheduledIDs.append(id)
+    }
+
+    /// Remove every delivered check-in banner (all are stale once no session
+    /// is running).
+    private func removeDeliveredCheckIns() {
+        center.getDeliveredNotifications { [weak self] delivered in
+            guard let self else { return }
+            let ids = delivered
+                .filter { $0.request.content.categoryIdentifier == self.checkInCategoryID }
+                .map(\.request.identifier)
+            if !ids.isEmpty { self.center.removeDeliveredNotifications(withIdentifiers: ids) }
+        }
     }
 
     private func cancelPendingCheckIns() {

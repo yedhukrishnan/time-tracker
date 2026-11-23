@@ -30,6 +30,11 @@ final class NudgeScheduler {
     private var heartbeat: Timer?
     private var snoozedUntil: Date?
     private var scheduledIDs: [String] = []
+    /// When the current idle stretch began; nil while tracking. Only a nudge
+    /// delivered since then counts as "unread" — one left over from before the
+    /// last session is stale and must not block new nudges. Starts at
+    /// distantPast so an unread nudge from before a relaunch still counts.
+    private var idleSince: Date? = .distantPast
 
     private let center = UNUserNotificationCenter.current()
     private let categoryID = "NUDGE"
@@ -82,8 +87,19 @@ final class NudgeScheduler {
     /// pending nudge is left untouched rather than pushed back an interval.
     func reschedule(keepPending: Bool = false) {
         if !keepPending { cancelPending() }
+
+        // Tracking (incl. paused) ⇒ silent, and any "you're not tracking"
+        // banner still in Notification Center is now false — clear it.
+        if isTrackingProvider() {
+            idleSince = nil
+            cancelPending()
+            removeDeliveredNudges()
+            return
+        }
+        if idleSince == nil { idleSince = .now }   // a session just ended
+        let since = idleSince ?? .distantPast
+
         guard let settings = settingsProvider(), settings.nudgeEnabled,
-              !isTrackingProvider(),                   // tracking (incl. paused) ⇒ silent
               !schedulesProvider().isEmpty else {
             cancelPending()
             return
@@ -97,7 +113,9 @@ final class NudgeScheduler {
             guard let self else { return }
             let hasPending = keepPending && pending.contains { $0.content.categoryIdentifier == self.categoryID }
             self.center.getDeliveredNotifications { delivered in
-                let outstanding = delivered.contains { $0.request.content.categoryIdentifier == self.categoryID }
+                let outstanding = delivered.contains {
+                    $0.request.content.categoryIdentifier == self.categoryID && $0.date >= since
+                }
                 Task { @MainActor in
                     guard !hasPending, !outstanding else { return }
                     self.armNext()
@@ -135,6 +153,17 @@ final class NudgeScheduler {
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: delay, repeats: false)
         center.add(UNNotificationRequest(identifier: id, content: content, trigger: trigger))
         scheduledIDs.append(id)
+    }
+
+    /// Remove every delivered nudge banner (all are stale once tracking).
+    private func removeDeliveredNudges() {
+        center.getDeliveredNotifications { [weak self] delivered in
+            guard let self else { return }
+            let ids = delivered
+                .filter { $0.request.content.categoryIdentifier == self.categoryID }
+                .map(\.request.identifier)
+            if !ids.isEmpty { self.center.removeDeliveredNotifications(withIdentifiers: ids) }
+        }
     }
 
     /// Remove the nudges we scheduled (tracked by id, so we never touch anything
