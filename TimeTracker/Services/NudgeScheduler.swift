@@ -54,13 +54,15 @@ final class NudgeScheduler {
         }
 
         // Backstop: re-arm after a missed dismiss event and catch work-hours
-        // boundaries. Cheap — reschedule() no-ops while a nudge is still live.
+        // boundaries. Cheap — no-ops while a nudge is pending or unread. It must
+        // not replace a pending nudge, or every heartbeat would push it out a
+        // full interval and nudges longer than 5 min would never fire.
         heartbeat = Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.reschedule() }
+            Task { @MainActor in self?.reschedule(keepPending: true) }
         }
         NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didWakeNotification, object: nil, queue: .main
-        ) { [weak self] _ in Task { @MainActor in self?.reschedule() } }
+        ) { [weak self] _ in Task { @MainActor in self?.reschedule(keepPending: true) } }
     }
 
     /// Suppress nudges for `snoozeDuration`, then rebuild.
@@ -75,21 +77,31 @@ final class NudgeScheduler {
     /// request, then checks whether a nudge is still sitting in Notification
     /// Center; if one is, we leave it and stay quiet (no stacking). Otherwise we
     /// schedule a single nudge `interval` out. Safe to call on any state change.
-    func reschedule() {
-        cancelPending()
-        guard let settings = settingsProvider(), settings.nudgeEnabled else { return }
-        guard !isTrackingProvider() else { return }   // tracking (incl. paused) ⇒ silent
-        guard !schedulesProvider().isEmpty else { return }
+    ///
+    /// `keepPending: true` (heartbeat / wake) is the backstop mode: an already
+    /// pending nudge is left untouched rather than pushed back an interval.
+    func reschedule(keepPending: Bool = false) {
+        if !keepPending { cancelPending() }
+        guard let settings = settingsProvider(), settings.nudgeEnabled,
+              !isTrackingProvider(),                   // tracking (incl. paused) ⇒ silent
+              !schedulesProvider().isEmpty else {
+            cancelPending()
+            return
+        }
 
-        // Gate on the live delivered set: don't arm another while one is unread.
-        // This is also what makes a missed dismiss callback self-heal — once the
-        // user clears the banner, a later reschedule() finds none and re-arms.
-        center.getDeliveredNotifications { [weak self] delivered in
+        // Gate on the live pending + delivered sets: don't replace a pending
+        // nudge (backstop mode) or arm another while one is unread. This is also
+        // what makes a missed dismiss callback self-heal — once the user clears
+        // the banner, a later reschedule() finds none and re-arms.
+        center.getPendingNotificationRequests { [weak self] pending in
             guard let self else { return }
-            let outstanding = delivered.contains { $0.request.content.categoryIdentifier == self.categoryID }
-            Task { @MainActor in
-                guard !outstanding else { return }
-                self.armNext()
+            let hasPending = keepPending && pending.contains { $0.content.categoryIdentifier == self.categoryID }
+            self.center.getDeliveredNotifications { delivered in
+                let outstanding = delivered.contains { $0.request.content.categoryIdentifier == self.categoryID }
+                Task { @MainActor in
+                    guard !hasPending, !outstanding else { return }
+                    self.armNext()
+                }
             }
         }
     }

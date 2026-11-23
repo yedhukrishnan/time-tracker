@@ -76,8 +76,11 @@ final class SessionMonitor {
 
         // Backstop: re-arm the next check-in after a missed dismiss event.
         // Cheap — reschedule() no-ops while a check-in is still unread.
+        // Must not disturb a check-in that's already pending — re-arming here
+        // would push it out a full interval every 5 min, so with any interval
+        // over 5 min it would never fire.
         heartbeat = Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.reschedule() }
+            Task { @MainActor in self?.reschedule(keepPending: true) }
         }
 
         // Sleep and screen lock are definitive "walked away" signals — record
@@ -89,7 +92,7 @@ final class SessionMonitor {
         ws.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in
             Task { @MainActor in
                 self?.evaluateReturn()
-                self?.reschedule()
+                self?.reschedule(keepPending: true)
             }
         }
         let dnc = DistributedNotificationCenter.default()
@@ -104,9 +107,14 @@ final class SessionMonitor {
     // MARK: - Scheduling (call on any state or settings change)
 
     /// Rebuild check-in notifications and start/stop the idle poller to match
-    /// current state. Idempotent; cheap to call often.
-    func reschedule() {
-        cancelPendingCheckIns()
+    /// current state. Call on any state or settings change.
+    ///
+    /// `keepPending: true` (heartbeat / wake) is the backstop mode: if a
+    /// check-in is already pending it's left untouched, and one is only armed
+    /// when nothing is pending or unread. The default re-arms from scratch,
+    /// which is what a state change (start, pause, interval edit) wants.
+    func reschedule(keepPending: Bool = false) {
+        if !keepPending { cancelPendingCheckIns() }
 
         let settings = settingsProvider()
         let entry = runningProvider()
@@ -122,17 +130,24 @@ final class SessionMonitor {
         }
 
         // Check-ins: arm at most one, and only if none is already unread.
-        guard let settings, settings.checkInEnabled, activelyTracking else { return }
+        guard let settings, settings.checkInEnabled, activelyTracking else {
+            cancelPendingCheckIns()
+            return
+        }
 
-        // Gate on the live delivered set: don't stack a second check-in behind an
-        // unread one. This also self-heals a missed dismiss callback — once the
-        // banner is cleared, a later reschedule() finds none and arms the next.
-        center.getDeliveredNotifications { [weak self] delivered in
+        // Gate on the live pending + delivered sets: don't replace a pending
+        // check-in (backstop mode) or stack one behind an unread banner. This
+        // also self-heals a missed dismiss callback — once the banner is
+        // cleared, a later reschedule() finds none and arms the next.
+        center.getPendingNotificationRequests { [weak self] pending in
             guard let self else { return }
-            let outstanding = delivered.contains { $0.request.content.categoryIdentifier == self.checkInCategoryID }
-            Task { @MainActor in
-                guard !outstanding else { return }
-                self.armCheckIn()
+            let hasPending = keepPending && pending.contains { $0.content.categoryIdentifier == self.checkInCategoryID }
+            self.center.getDeliveredNotifications { delivered in
+                let outstanding = delivered.contains { $0.request.content.categoryIdentifier == self.checkInCategoryID }
+                Task { @MainActor in
+                    guard !hasPending, !outstanding else { return }
+                    self.armCheckIn()
+                }
             }
         }
     }
