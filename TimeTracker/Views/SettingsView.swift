@@ -155,6 +155,9 @@ struct SettingsView: View {
                 LabeledContent("Email") {
                     Link("dev@yedhu.me", destination: URL(string: "mailto:dev@yedhu.me")!)
                 }
+                LabeledContent("Website") {
+                    Link("yedhu.me", destination: URL(string: "https://yedhu.me")!)
+                }
             }
             Section {
                 Text("© 2026 Yedhu Krishnan")
